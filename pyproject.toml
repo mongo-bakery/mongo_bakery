@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mongo-bakery"
+version = "0.1.0"
+description = "This project aims to simplify the process of creating MongoDB documents for testing purposes."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+authors = [
+    {name = "Roger Camargo", email = "huogerac@gmail.com"},
+    { name = "Vicente Marçal", email = "vicente.marcal@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+keywords = [
+    "MongoDB",
+    "Mongoengine",
+    "testing",
+    "factory",
+    "developer tools",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://github.com/huogerac/mongo_bakery/issues"
+
+[tool.hatch.version]
+path = "mongo_bakery/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/mongo_bakery",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "ruff>=0.9.6",
+]
+
+[tool.ruff.lint]
+select = [
+    "S", # flake8-bandit
+    "B", # flake8-bugbear
+    "C", # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "I", # isort
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "D", # pydocstyle
+    "UP", # pyupgrade
+    "RUF100", # Unused noqa directive
+]
+
+ignore = ["B904", "E501", "S101", "D1", "D212"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_*.py" = [
+    "S",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports=true
+split-on-trailing-comma=true
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+force-wrap-aliases=true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
