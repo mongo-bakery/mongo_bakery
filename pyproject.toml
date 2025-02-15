@@ -13,7 +13,9 @@ authors = [
     { name = "Vicente Marçal", email = "vicente.marcal@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "faker>=36.1.1",
+]
 keywords = [
     "MongoDB",
     "Mongoengine",
@@ -78,3 +80,14 @@ force-wrap-aliases=true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+python_files = [
+    "test*.py",
+]
+
+minversion = "6.0"
+addopts = "-ra -q -vv"
+testpaths = [
+    "tests/*",
+]

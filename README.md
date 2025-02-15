@@ -53,10 +53,11 @@ manage our prject dependencies and vitualenv. So it is a prerequisite to the pro
 
 5. **Make Changes**: Implement your feature or bugfix.
 
-6. **Run Tests**: Ensure all tests pass before submitting your changes.
+6. **Run Tests and Lint**: Ensure all tests and lint pass before submitting your changes.
 
     ```bash
-    pytest
+    uv run ruff check
+    uv run pytest
     ```
 
 7. **Commit Changes**: Commit your changes with a descriptive commit message. Use
