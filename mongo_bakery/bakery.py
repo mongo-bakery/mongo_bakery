@@ -1,7 +1,9 @@
-class Baker:
+from mongoengine import Document
 
-    def make(self, model_class):
-        return model_class()
+
+class Baker:
+    def make(self, document_class: Document) -> Document:
+        return document_class()
 
 
 baker = Baker()
