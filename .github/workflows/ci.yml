@@ -1,0 +1,32 @@
+name: mongo-bakery
+
+on: [push, pull_request]
+
+jobs:
+  uv:
+    name: python
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache UV dependencies
+        id: uv-cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.uv-cache
+          key: setup-uv-1-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            setup-uv-1-${{ runner.os }}-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Run linters
+        run: uv run ruff check
+
+      - name: Run tests
+        run: uv run pytest tests --cov=mongo_bakery
