@@ -1,5 +1,7 @@
 # mongo_bakery
 
+[![codecov](https://codecov.io/gh/mongo-bakery/mongo_bakery/graph/badge.svg?token=FXA6QEILP6)](https://codecov.io/gh/mongo-bakery/mongo_bakery)
+
 Inspired by [model-bakery](https://model-bakery.readthedocs.io/en/latest/), this project aims to simplify the process of
 creating MongoDB documents for testing purposes. The goal is to deliver a maintainable, intuitive, and
 developer-friendly API specifically designed for MongoDB. By streamlining the generation of test data, this tool will
