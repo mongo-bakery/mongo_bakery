@@ -1,0 +1,13 @@
+site_name: Mongo Bakkery
+repo_url: https://github.com/mongo-bakery/mongo_bakery
+repo_name: mongo_bakery
+edit_uri: tree/main/docs
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  font:
+    text: 'Roboto'
+    code: 'Roboto Mono'
