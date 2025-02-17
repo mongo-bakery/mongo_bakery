@@ -50,6 +50,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
     "ruff>=0.9.6",
+    "taskipy>=1.14.1",
 ]
 
 [tool.ruff.lint]
@@ -93,3 +94,9 @@ addopts = "-ra -q -vv"
 testpaths = [
     "tests/*",
 ]
+
+[tool.taskipy.tasks]
+lint = 'uv run ruff check'
+pre_test = 'task lint'
+test = 'pytest --cov=mongo_bakery'
+post_test = 'coverage html'

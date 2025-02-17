@@ -56,9 +56,11 @@ manage our prject dependencies and vitualenv. So it is a prerequisite to the pro
 6. **Run Tests and Lint**: Ensure all tests and lint pass before submitting your changes.
 
     ```bash
-    uv run ruff check
-    uv run pytest
+    uv run task test
     ```
+
+    This command runs `ruff check` as a lint, `pytest` to run all tests, and `coverage html` to generate an html report of test coverage. This html report is for the development side only. On our CI with Github Actions, it runs `pytest --cov=mongo_bakery --cov-report=xml` to generate a report that is send to
+    [codecov.io](https://app.codecov.io/gh/mongo-bakery/mongo_bakery)
 
 7. **Commit Changes**: Commit your changes with a descriptive commit message. Use
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to write your commit messages.
