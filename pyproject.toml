@@ -52,6 +52,11 @@ dev = [
     "ruff>=0.9.6",
     "taskipy>=1.14.1",
 ]
+docs = [
+    "mkdocs-material>=9.6.4",
+    "mkdocstrings>=0.28.1",
+    "mkdocstrings-python>=1.16.0",
+]
 
 [tool.ruff.lint]
 select = [
