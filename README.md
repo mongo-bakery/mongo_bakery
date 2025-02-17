@@ -48,7 +48,7 @@ manage our prject dependencies and vitualenv. So it is a prerequisite to the pro
     uv sync
     ```
 
-    This command will create the Python virtual environment with the Python version of the project and install all 
+    This command will create the Python virtual environment with the Python version of the project and install all
     dependencies.
 
 5. **Make Changes**: Implement your feature or bugfix.

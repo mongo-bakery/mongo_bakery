@@ -1,20 +1,23 @@
+from mongoengine import Document
+
+from mongo_bakery import baker
+
 
 def test_mongo_bakery_module_exists():
-    from mongo_bakery import baker
+    """Test to ensure that the 'baker' module from 'mongo_bakery' is imported correctly."""
     assert baker is not None
 
 
 def test_baker_has_make_method():
-    from mongo_bakery import baker
+    """Test to ensure that the 'baker' object has a 'make' method and that it is callable."""
     assert hasattr(baker, "make") and callable(baker.make)
 
 
-def test_baker_make_accepts_model():
-    from mongo_bakery import baker
-
-    class FakeModel:
+def test_baker_make_accepts_document():
+    """Test to ensure that the 'make' method of the 'baker' object accept a Mongo Document and return its instance."""
+    class FakeDocument(Document):
         pass
 
-    obj = baker.make(FakeModel)
+    obj = baker.make(FakeDocument)
 
-    assert isinstance(obj, FakeModel)
+    assert isinstance(obj, FakeDocument)
