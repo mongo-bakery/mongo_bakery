@@ -12,10 +12,10 @@ authors = [
     {name = "Roger Camargo", email = "huogerac@gmail.com"},
     {name = "Vicente Marçal", email = "vicente.marcal@gmail.com"}
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "faker>=36.1.1",
-    "mongoengine>=0.29.1",
+    "mongoengine>=0.20.0",
 ]
 keywords = [
     "MongoDB",
