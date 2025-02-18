@@ -84,6 +84,9 @@ force-wrap-aliases=true
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.mccabe]
+max-complexity = 20
+
 [tool.pytest.ini_options]
 python_files = [
     "test*.py",

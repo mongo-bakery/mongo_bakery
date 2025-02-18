@@ -11,8 +11,8 @@ faker = Faker()
 
 
 class Baker:
-    def __init__(self, mock_class=[]):
-        self._dependencies_to_patch = mock_class
+    def __init__(self, mock_class=None):
+        self._dependencies_to_patch = mock_class or []
         self._created_instances = []
 
     def mock_dependencies(self, mock_class: list):
@@ -85,9 +85,7 @@ class Baker:
             return {"key": faker.word(), "value": faker.word()}
         elif isinstance(field, fields.ObjectIdField):
             return ObjectId()
-        elif isinstance(field, fields.EmbeddedDocumentField):
-            return self.make(field.document_type)
-        elif isinstance(field, fields.ReferenceField):
+        elif isinstance(field, fields.EmbeddedDocumentField | fields.ReferenceField):
             return self.make(field.document_type)
         return None
 
