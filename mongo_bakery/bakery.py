@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from bson import ObjectId
 from faker import Faker
-from mongoengine import Document, fields, signals
+from mongoengine import Document, EmbeddedDocument, fields, signals
 
 faker = Faker()
 
@@ -20,7 +20,7 @@ class Baker:
 
     def make(self, document_class: Document, _quantity=1, **kwargs) -> Document:
         """Creates and saves one or more instances of a MongoEngine document."""
-        if not issubclass(document_class, Document):
+        if not (issubclass(document_class, Document) or issubclass(document_class, EmbeddedDocument)):
             raise ValueError("The document must be a subclass of mongoengine.Document")
 
         patch_dependencies = {}
@@ -31,15 +31,11 @@ class Baker:
             source_lines = inspect.getsource(module).splitlines()
             for dep in self._dependencies_to_patch:
                 if any(f" {dep}" in line or f"{dep} " in line for line in source_lines):
-                    patch_dependencies[dep] = patch(
-                        f"{module_name}.{dep}", new=MagicMock()
-                    )
+                    patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
 
         # Temporarily disable signals
         if hasattr(document_class, "post_save"):
-            signals.post_save.disconnect(
-                document_class.post_save, sender=document_class
-            )
+            signals.post_save.disconnect(document_class.post_save, sender=document_class)
 
         instances = []
         with ExitStack() as stack:
@@ -57,6 +53,9 @@ class Baker:
 
                 instance_data.update(kwargs)
                 instance = document_class(**instance_data)
+                if issubclass(document_class, EmbeddedDocument):
+                    instances.append(instance)
+                    return instances[0]
                 instance.save()
                 self._created_instances.append(instance)
                 instances.append(instance)

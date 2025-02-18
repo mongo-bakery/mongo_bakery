@@ -1,6 +1,7 @@
 # mongo_bakery
 
 [![codecov](https://codecov.io/gh/mongo-bakery/mongo_bakery/graph/badge.svg?token=FXA6QEILP6)](https://codecov.io/gh/mongo-bakery/mongo_bakery)
+![mongo-bakery-ci](https://github.com/mongo-bakery/mongo_bakery/actions/workflows/ci.yml/badge.svg)
 
 Inspired by [model-bakery](https://model-bakery.readthedocs.io/en/latest/), this project aims to simplify the process of
 creating MongoDB documents for testing purposes. The goal is to deliver a maintainable, intuitive, and
@@ -28,7 +29,7 @@ are populated).
 
 We welcome contributions to the mongo_bakery project! Here are the steps to get started:
 
-1. **Fork the Repository**: Fork the [mongo_bakery repository](https://github.com/huogerac/mongo_bakery) on GitHub.
+1. **Fork the Repository**: Fork the [mongo_bakery repository](https://github.com/mongo-bakery/mongo_bakery) on GitHub.
 
 2. **Clone Your Fork**: Clone your forked repository to your local machine.
 
