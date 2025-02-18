@@ -16,7 +16,7 @@ def test_baker_has_make_method():
 def test_baker_make_accepts_document():
     """Test to ensure that the 'make' method of the 'baker' object accept a Mongo Document and return its instance."""
     class FakeDocument(Document):
-        pass
+        meta = {"collection": "fake_collection"}
 
     obj = baker.make(FakeDocument)
 
