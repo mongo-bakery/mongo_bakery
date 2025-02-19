@@ -86,7 +86,6 @@ class Baker:
             return ObjectId()
         elif isinstance(field, fields.EmbeddedDocumentField | fields.ReferenceField):
             return self.make(field.document_type)
-        return None
 
     def cleanup(self):
         """Delete all created instances."""

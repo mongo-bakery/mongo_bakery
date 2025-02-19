@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+import pytest
 from mongoengine import (
     BooleanField,
     DateTimeField,
@@ -10,6 +13,7 @@ from mongoengine import (
     ListField,
     ObjectIdField,
     StringField,
+    signals,
 )
 
 from mongo_bakery import baker
@@ -20,7 +24,7 @@ class Department(EmbeddedDocument):
     location = StringField(required=True)
 
 
-class TestDocument(Document):
+class DocumentToTest(Document):
     _id = ObjectIdField(primary_key=True)
     name = StringField(required=True)
     age = IntField(required=True)
@@ -30,6 +34,7 @@ class TestDocument(Document):
     dependents = ListField(StringField(), required=True)
     permissions = DictField(required=True)
     department = EmbeddedDocumentField("Department", required=True)
+    region = StringField(required=False)
 
     meta = {"collection": "test_documents"}
 
@@ -56,16 +61,47 @@ def test_baker_make_accepts_document():
 
 
 def test_make_single_instance():
-    instance = baker.make(TestDocument)
-    assert isinstance(instance, TestDocument)
+    instance = baker.make(DocumentToTest)
+    assert isinstance(instance, DocumentToTest)
 
 
 def test_make_multiple_instances():
-    instances = baker.make(TestDocument, _quantity=3)
+    instances = baker.make(DocumentToTest, _quantity=3)
     assert len(instances) == 3
 
 
 def test_cleanup():
-    instance = baker.make(TestDocument)  # noqa F841
+    instance = baker.make(DocumentToTest)  # noqa F841
     baker.cleanup()
-    assert TestDocument.objects.count() == 0
+    assert DocumentToTest.objects.count() == 0
+
+
+def test_mock_dependencies():
+    baker.mock_dependencies(["SomeClass", "AnotherClass"])
+    instance = baker.make(DocumentToTest)
+    assert isinstance(instance, DocumentToTest)
+
+
+def test_make_with_invalid_document_class():
+    with pytest.raises(ValueError, match="The document must be a subclass of mongoengine.Document"):
+        baker.make(str)
+
+
+def test_signals_disconnected_and_reconnected():
+    class DocumentWithSignals(Document):
+        name = StringField(required=True)
+        age = IntField(required=True)
+
+        meta = {"collection": "test_documents"}
+
+        @classmethod
+        def post_save(cls, sender, document, **kwargs):
+            pass
+
+    with (
+        patch.object(signals.post_save, "disconnect") as mock_disconnect,
+        patch.object(signals.post_save, "connect") as mock_connect,
+    ):
+        baker.make(DocumentWithSignals)
+        mock_connect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)
+        mock_disconnect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)
