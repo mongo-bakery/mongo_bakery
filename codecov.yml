@@ -1,10 +1,19 @@
 coverage:
+  round: up
+  range: 80..100
   status:
     project:
       default:
         target: auto
-        threshold: 0%
+        threshold: 20%
         base: auto 
+        informational: true
+    patch:
+      default:
+        target: auto
+        threshold: 20%
+        base: auto 
+        informational: true
 comment:
   layout: " diff, flags, files"
   behavior: default
