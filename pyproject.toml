@@ -14,6 +14,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "blinker>=1.9.0",
     "faker>=36.1.1",
     "mongoengine>=0.20.0",
     "mongomock>=4.3.0",
