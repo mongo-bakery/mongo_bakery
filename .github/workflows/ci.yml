@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   uv:
-    name: python
+    name: mongo-bakery-ci
     runs-on: ubuntu-latest
 
     steps:
