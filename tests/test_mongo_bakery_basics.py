@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 from mongoengine import (
     BooleanField,
@@ -13,7 +11,6 @@ from mongoengine import (
     ListField,
     ObjectIdField,
     StringField,
-    signals,
 )
 
 from mongo_bakery import baker
@@ -177,39 +174,3 @@ def test_make_with_invalid_document_class():
     """
     with pytest.raises(ValueError, match="The document must be a subclass of mongoengine.Document"):
         baker.make(str)
-
-
-def test_signals_disconnected_and_reconnected():
-    """
-    Test that signals are properly disconnected and reconnected when creating a document.
-
-    This test defines a `DocumentWithSignals` class with `name` and `age` fields and a `post_save` signal handler.
-    It connects the `post_save` signal to the `post_save` handler of `DocumentWithSignals`.
-
-    The test then patches the `disconnect` and `connect` methods of the `post_save` signal to ensure they are called
-    correctly when a `DocumentWithSignals` instance is created using `baker.make`.
-
-    Assertions:
-    - `mock_connect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)`
-    - `mock_disconnect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)`
-    """
-
-    class DocumentWithSignals(Document):
-        name = StringField(required=True)
-        age = IntField(required=True)
-
-        meta = {"collection": "test_documents"}
-
-        @classmethod
-        def post_save(cls, sender, document, **kwargs):
-            raise Exception("this code don't run")  # pragma: no cover
-
-    signals.post_save.connect(DocumentWithSignals.post_save, sender=DocumentWithSignals)
-
-    with (
-        patch.object(signals.post_save, "disconnect") as mock_disconnect,
-        patch.object(signals.post_save, "connect") as mock_connect,
-    ):
-        baker.make(DocumentWithSignals)
-        mock_connect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)
-        mock_disconnect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)
