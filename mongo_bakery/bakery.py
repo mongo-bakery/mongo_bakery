@@ -1,6 +1,7 @@
 import inspect
 import sys
 from contextlib import ExitStack
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from bson import ObjectId
@@ -16,9 +17,31 @@ class Baker:
         self._created_instances = []
 
     def mock_dependencies(self, mock_class: list):
+        """
+        Mocks the specified dependencies for testing purposes.
+
+        Args:
+            mock_class (list): A list of classes or modules to be mocked.
+        """
         self._dependencies_to_patch = mock_class
 
-    def make(self, document_class: Document, _quantity=1, **kwargs) -> Document:
+    def make(self, document_class: Document, _quantity: int = 1, **kwargs: dict[Any, Any]) -> Document:
+        """
+        Creates and saves one or more instances of a MongoEngine document.
+
+        Args:
+            document_class (Document): The MongoEngine document class to instantiate.
+            _quantity (int, optional): The number of instances to create. Defaults to 1.
+            **kwargs: Additional field values to set on the document instances.
+
+        Returns:
+            Document or list[Document]: A single document instance if _quantity is 1,
+            otherwise a list of document instances.
+
+        Raises:
+            ValueError: If the provided document_class is not a subclass of mongoengine.Document
+            or mongoengine.EmbeddedDocument.
+        """
         """Creates and saves one or more instances of a MongoEngine document."""
         if not (issubclass(document_class, Document) or issubclass(document_class, EmbeddedDocument)):
             raise ValueError("The document must be a subclass of mongoengine.Document")
@@ -67,28 +90,57 @@ class Baker:
         return instances if _quantity > 1 else instances[0]
 
     def _generate_mock_data(self, field):
-        """Generate mock data based on field type."""
-        if isinstance(field, fields.StringField):
-            return faker.word()
-        elif isinstance(field, fields.IntField):
-            return faker.random_int(min=0, max=100)
-        elif isinstance(field, fields.FloatField):
-            return faker.pyfloat(min_value=0.1, max_value=1000)
-        elif isinstance(field, fields.BooleanField):
-            return faker.boolean()
-        elif isinstance(field, fields.DateTimeField):
-            return faker.date_time_this_decade()
-        elif isinstance(field, fields.ListField):
-            return [faker.word() for _ in range(2)]
-        elif isinstance(field, fields.DictField):
-            return {"key": faker.word(), "value": faker.word()}
-        elif isinstance(field, fields.ObjectIdField):
-            return ObjectId()
-        elif isinstance(field, fields.EmbeddedDocumentField | fields.ReferenceField):
-            return self.make(field.document_type)
+        """
+        Generate mock data based on the provided field type.
+
+        Args:
+            field (Field): The field for which to generate mock data.
+
+        Returns:
+            Any: Mock data appropriate for the given field type.
+
+        Raises:
+            ValueError: If the field type is not supported.
+
+        Supported field types:
+            - StringField: Returns a random word.
+            - IntField: Returns a random integer between 0 and 100.
+            - FloatField: Returns a random float between 0.1 and 1000.
+            - BooleanField: Returns a random boolean value.
+            - DateTimeField: Returns a random datetime within the last decade.
+            - ListField: Returns a list of two random words.
+            - DictField: Returns a dictionary with random word values.
+            - ObjectIdField: Returns a new ObjectId.
+            - EmbeddedDocumentField: Returns a mock embedded document.
+            - ReferenceField: Returns a mock reference document.
+        """
+        match field:
+            case fields.StringField():
+                return faker.word()
+            case fields.IntField():
+                return faker.random_int(min=0, max=100)
+            case fields.FloatField():
+                return faker.pyfloat(min_value=0.1, max_value=1000)
+            case fields.BooleanField():
+                return faker.boolean()
+            case fields.DateTimeField():
+                return faker.date_time_this_decade()
+            case fields.ListField():
+                return [faker.word() for _ in range(2)]
+            case fields.DictField():
+                return {"key": faker.word(), "value": faker.word()}
+            case fields.ObjectIdField():
+                return ObjectId()
+            case fields.EmbeddedDocumentField() | fields.ReferenceField():
+                return self.make(field.document_type)
 
     def cleanup(self):
-        """Delete all created instances."""
+        """
+        Delete all created instances.
+
+        This method iterates over all instances stored in the `_created_instances`
+        list, calls their `delete` method to remove them, and then clears the list.
+        """
         for instance in self._created_instances:
             instance.delete()
         self._created_instances.clear()
