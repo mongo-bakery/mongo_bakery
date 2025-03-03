@@ -116,7 +116,10 @@ class Baker:
         """
         match field:
             case fields.StringField():
-                return faker.word()
+                value = faker.word()
+                if hasattr(faker, field.name):
+                    value = getattr(faker, field.name)()
+                return value
             case fields.IntField():
                 return faker.random_int(min=0, max=100)
             case fields.FloatField():

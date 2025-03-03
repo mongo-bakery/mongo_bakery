@@ -26,6 +26,7 @@ class Department(EmbeddedDocument):
     """
 
     name = StringField(required=True)
+    address = StringField(required=True)
     location = StringField(required=True)
 
 
@@ -51,6 +52,8 @@ class DocumentToTest(Document):
 
     _id = ObjectIdField(primary_key=True)
     name = StringField(required=True)
+    email = StringField(required=True)
+    company = StringField(required=True)
     age = IntField(required=True)
     salary = FloatField(required=True)
     is_admin = BooleanField(required=True)
