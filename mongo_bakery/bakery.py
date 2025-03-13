@@ -1,14 +1,15 @@
+import importlib
 import inspect
 import sys
 from contextlib import ExitStack
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from bson import ObjectId
 from faker import Faker
-from mongoengine import Document, EmbeddedDocument, fields, signals
+from mongoengine import Document, EmbeddedDocument, signals
 
 faker = Faker()
+bakery_fields_generators = importlib.import_module("mongo_bakery.bakery_fields_generators")
 
 
 class Baker:
@@ -94,48 +95,23 @@ class Baker:
         Generate mock data based on the provided field type.
 
         Args:
-            field (Field): The field for which to generate mock data.
+            field: The Field type used in the convention. @see the bakery_fields_generators module.
 
         Returns:
             Any: Mock data appropriate for the given field type.
 
-        Raises:
-            ValueError: If the field type is not supported.
-
-        Supported field types:
-            - StringField: Returns a random word.
-            - IntField: Returns a random integer between 0 and 100.
-            - FloatField: Returns a random float between 0.1 and 1000.
-            - BooleanField: Returns a random boolean value.
-            - DateTimeField: Returns a random datetime within the last decade.
-            - ListField: Returns a list of two random words.
-            - DictField: Returns a dictionary with random word values.
-            - ObjectIdField: Returns a new ObjectId.
-            - EmbeddedDocumentField: Returns a mock embedded document.
-            - ReferenceField: Returns a mock reference document.
         """
-        match field:
-            case fields.StringField():
-                value = faker.word()
-                if hasattr(faker, field.name):
-                    value = getattr(faker, field.name)()
-                return value
-            case fields.IntField():
-                return faker.random_int(min=0, max=100)
-            case fields.FloatField():
-                return faker.pyfloat(min_value=0.1, max_value=1000)
-            case fields.BooleanField():
-                return faker.boolean()
-            case fields.DateTimeField():
-                return faker.date_time_this_decade()
-            case fields.ListField():
-                return [faker.word() for _ in range(2)]
-            case fields.DictField():
-                return {"key": faker.word(), "value": faker.word()}
-            case fields.ObjectIdField():
-                return ObjectId()
-            case fields.EmbeddedDocumentField() | fields.ReferenceField():
-                return self.make(field.document_type)
+        field_type = type(field).__name__
+        mock_method_name = f"mock_{field_type}"
+        mock_method = getattr(bakery_fields_generators, mock_method_name, self._mock_default)
+
+        if field_type in {"EmbeddedDocumentField", "ReferenceField"}:
+            return mock_method(field, self)
+        return mock_method(field)
+
+    def _mock_default(self, field):
+        """When there is no match for the field type."""
+        raise ValueError(f"No mock defined for field type: {type(field).__name__}")
 
     def cleanup(self):
         """
