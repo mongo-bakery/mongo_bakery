@@ -88,3 +88,11 @@ changes and any relevant information.
 
 10. **Review Process**: Your pull request will be reviewed by the maintainers. Be prepared to make any necessary
 changes based on feedback.
+
+### Contributors
+
+<a href="https://github.com/mongo-bakery/mongo_bakery/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mongo-bakery/mongo_bakery" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
