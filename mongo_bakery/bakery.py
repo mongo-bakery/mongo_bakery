@@ -127,7 +127,15 @@ class Baker:
         mock_method_name = f"mock_{field_type}"
         mock_method = getattr(bakery_fields_generators, mock_method_name, self._mock_default)
 
-        if field_type in {"EmbeddedDocumentField", "ReferenceField", "ListField"}:
+        if field_type in {
+            "EmbeddedDocumentField",
+            "ReferenceField",
+            "ListField",
+            "EmbeddedDocumentListField",
+            "MapField",
+            "LazyReferenceField",
+            "GenericReferenceField",
+        }:
             return mock_method(field, self)
         return mock_method(field)
 
