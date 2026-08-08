@@ -32,6 +32,9 @@ jobs:
       - name: Run linters
         run: uv run ruff check
 
+      - name: Run type checker
+        run: uv run mypy mongo_bakery
+
       - name: Run tests
         run: |
           uv run coverage run -m pytest tests
