@@ -6,7 +6,7 @@ faker = Faker()
 
 def mock_StringField(field):
     value = faker.word()
-    if hasattr(faker, field.name):
+    if field.name and hasattr(faker, field.name):
         value = getattr(faker, field.name)()
     return value
 
@@ -27,8 +27,10 @@ def mock_DateTimeField(field):
     return faker.date_time_this_decade()
 
 
-def mock_ListField(field):
-    return [faker.word() for _ in range(2)]
+def mock_ListField(field, baker):
+    if field.field is None:
+        return [faker.word() for _ in range(2)]
+    return [baker._generate_mock_data(field.field) for _ in range(2)]
 
 
 def mock_DictField(field):
