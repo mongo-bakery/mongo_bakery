@@ -3,10 +3,12 @@ import inspect
 import re
 import sys
 from contextlib import ExitStack
+from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 from faker import Faker
+from faker.generator import SeedType
 from mongoengine import Document, EmbeddedDocument, signals
 
 from mongo_bakery.sequences import Sequence
@@ -118,7 +120,12 @@ class Baker:
         finally:
             self._generation_chain.pop()
 
-    def seq(self, value, increment_by=1, start=None):
+    def seq(
+        self,
+        value: str | int | float | date | datetime,
+        increment_by: int | float | timedelta = 1,
+        start: int | float | timedelta | None = None,
+    ) -> Sequence:
         """
         Build a sequence that yields an incrementing value each time `make` creates an instance.
 
@@ -133,7 +140,7 @@ class Baker:
         """
         return Sequence(value, increment_by=increment_by, start=start)
 
-    def seed(self, value):
+    def seed(self, value: SeedType) -> None:
         """
         Seed Faker's shared random generator, so `make` produces reproducible mock data.
 
