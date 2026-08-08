@@ -52,9 +52,12 @@ class Baker:
         patch_dependencies = {}
         module_name = document_class.__module__
 
-        if module_name in sys.modules:
+        if self._dependencies_to_patch and module_name in sys.modules:
             module = sys.modules[module_name]
-            source_lines = inspect.getsource(module).splitlines()
+            try:
+                source_lines = inspect.getsource(module).splitlines()
+            except (OSError, TypeError):
+                source_lines = []
             for dep in self._dependencies_to_patch:
                 if any(f" {dep}" in line or f"{dep} " in line for line in source_lines):
                     patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())

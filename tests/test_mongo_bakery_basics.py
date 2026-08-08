@@ -1,3 +1,5 @@
+import sys
+import types
 import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -394,6 +396,87 @@ def test_mock_dependencies():
     baker.mock_dependencies(["SomeClass", "AnotherClass"])
     instance = baker.make(DocumentToTest)
     assert isinstance(instance, DocumentToTest)
+
+
+def test_make_does_not_crash_when_module_has_no_file():
+    """
+    Test that `baker.make` doesn't crash when the document's module has no `__file__` (issue #47).
+
+    This reproduces classes defined in a `-c` script, a REPL session, or any other context where
+    the module has no backing file, by registering a bare `types.ModuleType` in `sys.modules` and
+    pointing a Document's `__module__` at it. `inspect.getsource` raises `TypeError` for such a
+    module, which previously went unhandled since it was called unconditionally.
+
+    Asserts:
+    - `baker.make` returns a valid instance instead of raising.
+    """
+    module_name = "mongo_bakery_test_module_without_file"
+    sys.modules[module_name] = types.ModuleType(module_name)
+    try:
+
+        class NoFileDocument(Document):
+            meta = {"collection": "fake_collection"}
+
+        NoFileDocument.__module__ = module_name
+
+        instance = baker.make(NoFileDocument)
+        assert isinstance(instance, NoFileDocument)
+    finally:
+        del sys.modules[module_name]
+
+
+def test_make_does_not_crash_when_module_source_is_unreadable():
+    """
+    Test that `baker.make` doesn't crash when the document's module `__file__` can't be read (issue #47).
+
+    This reproduces a module whose `__file__` points to a path that no longer exists (e.g. a
+    deleted or relocated file). `inspect.getsource` raises `OSError` for such a module, which
+    previously went unhandled since it was called unconditionally.
+
+    Asserts:
+    - `baker.make` returns a valid instance instead of raising.
+    """
+    module_name = "mongo_bakery_test_module_bad_file"
+    fake_module = types.ModuleType(module_name)
+    fake_module.__file__ = "/nonexistent/path/does_not_exist.py"
+    sys.modules[module_name] = fake_module
+    try:
+
+        class UnreadableSourceDocument(Document):
+            meta = {"collection": "fake_collection"}
+
+        UnreadableSourceDocument.__module__ = module_name
+
+        instance = baker.make(UnreadableSourceDocument)
+        assert isinstance(instance, UnreadableSourceDocument)
+    finally:
+        del sys.modules[module_name]
+
+
+def test_make_skips_dependency_patching_when_source_unavailable():
+    """
+    Test that `baker.make` falls back gracefully when the source is unavailable (issue #47).
+
+    `mock_dependencies` is configured but the document's module source can't be recovered.
+
+    Asserts:
+    - `baker.make` still returns a valid instance instead of raising, even with dependencies configured.
+    """
+    module_name = "mongo_bakery_test_module_with_deps_no_source"
+    sys.modules[module_name] = types.ModuleType(module_name)
+    try:
+        baker.mock_dependencies(["UnrecoverableSourceDependency"])
+
+        class NoSourceWithDepsDocument(Document):
+            meta = {"collection": "fake_collection"}
+
+        NoSourceWithDepsDocument.__module__ = module_name
+
+        instance = baker.make(NoSourceWithDepsDocument)
+        assert isinstance(instance, NoSourceWithDepsDocument)
+    finally:
+        del sys.modules[module_name]
+        baker.mock_dependencies([])
 
 
 def test_make_respects_string_field_choices():
