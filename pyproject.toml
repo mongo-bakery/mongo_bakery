@@ -37,7 +37,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/huogerac/mongo_bakery/issues"
+Homepage = "https://github.com/mongo-bakery/mongo_bakery"
+Repository = "https://github.com/mongo-bakery/mongo_bakery"
+Documentation = "https://mongo-bakery.github.io/mongo_bakery/"
+Issues = "https://github.com/mongo-bakery/mongo_bakery/issues"
 
 [tool.hatch.version]
 path = "mongo_bakery/__about__.py"
