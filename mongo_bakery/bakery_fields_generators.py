@@ -27,7 +27,10 @@ def mock_UUIDField(field):
 def mock_StringField(field):
     value = faker.word()
     if field.name and hasattr(faker, field.name):
-        value = getattr(faker, field.name)()
+        try:
+            value = getattr(faker, field.name)()
+        except TypeError:
+            value = faker.word()
     return value
 
 
