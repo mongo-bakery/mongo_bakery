@@ -1,19 +1,30 @@
+import uuid
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from mongoengine import (
     BooleanField,
     DateField,
     DateTimeField,
+    DecimalField,
     DictField,
     Document,
+    EmailField,
     EmbeddedDocument,
     EmbeddedDocumentField,
+    EmbeddedDocumentListField,
     FloatField,
+    GenericReferenceField,
     IntField,
+    LazyReferenceField,
     ListField,
+    LongField,
+    MapField,
     ObjectIdField,
     StringField,
+    URLField,
+    UUIDField,
 )
 
 from mongo_bakery import baker
@@ -121,6 +132,113 @@ class TypedListDocument(Document):
     numbers = ListField(IntField(), required=True)
     names = ListField(StringField(), required=True)
     tags = ListField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class MiscFieldsDocument(Document):
+    """
+    MiscFieldsDocument exercises the field types that had no mock generator at all (issue #46).
+
+    Attributes:
+        birthday (DateField): Used to test `mock_DateField`.
+        balance (DecimalField): Used to test `mock_DecimalField`.
+        email (EmailField): Used to test `mock_EmailField`.
+        homepage (URLField): Used to test `mock_URLField`.
+        external_id (UUIDField): Used to test `mock_UUIDField`.
+        views (LongField): Used to test `mock_LongField`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    birthday = DateField(required=True)
+    balance = DecimalField(required=True)
+    email = EmailField(required=True)
+    homepage = URLField(required=True)
+    external_id = UUIDField(required=True, binary=False)
+    views = LongField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class EmbeddedListDocument(Document):
+    """
+    EmbeddedListDocument exercises `EmbeddedDocumentListField` mock generation (issue #46).
+
+    Attributes:
+        departments (EmbeddedDocumentListField): A list of embedded `Department` documents.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    departments = EmbeddedDocumentListField(Department, required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class MapFieldDocument(Document):
+    """
+    MapFieldDocument exercises `MapField` mock generation across a typed inner field (issue #46).
+
+    Attributes:
+        scores (MapField): A mapping of names to integers, typed via `MapField(IntField())`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    scores = MapField(IntField(), required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class ReferencedDocument(Document):
+    """
+    ReferencedDocument is the target document type for `LazyRefDocument` (issue #46).
+
+    Attributes:
+        name (StringField): A simple required field, only used to make the document saveable.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class LazyRefDocument(Document):
+    """
+    LazyRefDocument exercises `LazyReferenceField` mock generation (issue #46).
+
+    Attributes:
+        ref (LazyReferenceField): A lazy reference to a `ReferencedDocument`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    ref = LazyReferenceField(ReferencedDocument, required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class GenericRefDocument(Document):
+    """
+    GenericRefDocument exercises the `GenericReferenceField` limitation documented in issue #46.
+
+    Attributes:
+        ref (GenericReferenceField): A reference with no fixed `document_type`, which baker
+            cannot mock automatically.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    ref = GenericReferenceField(required=True)
 
     meta = {"collection": "test_documents"}
 
@@ -342,6 +460,82 @@ def test_make_typed_string_list_field_does_not_raise():
     """
     instance = baker.make(TypedListDocument)
     assert all(isinstance(value, str) for value in instance.names)
+
+
+def test_make_generates_values_for_previously_unsupported_field_types():
+    """
+    Test that `baker.make` generates valid values for field types that previously had no generator (issue #46).
+
+    Before this fix, `DateField`, `DecimalField`, `EmailField`, `URLField`, `UUIDField` and `LongField`
+    all fell through to `_mock_default` and raised `ValueError: No mock defined for field type: ...`.
+
+    Asserts:
+    - `birthday` is a `date`.
+    - `balance` is a `Decimal`.
+    - `email` contains an "@".
+    - `homepage` starts with "http".
+    - `external_id` is a valid UUID.
+    - `views` is an `int`.
+    """
+    instance = baker.make(MiscFieldsDocument)
+    assert isinstance(instance.birthday, date)
+    assert isinstance(instance.balance, Decimal)
+    assert "@" in instance.email
+    assert instance.homepage.startswith("http")
+    assert uuid.UUID(str(instance.external_id))
+    assert isinstance(instance.views, int)
+
+
+def test_make_respects_embedded_document_list_field_inner_type():
+    """
+    Test that `baker.make` generates a list of embedded document instances for `EmbeddedDocumentListField` (issue #46).
+
+    Asserts:
+    - `departments` has 2 entries.
+    - Every entry is a `Department` instance.
+    """
+    instance = baker.make(EmbeddedListDocument)
+    assert len(instance.departments) == 2
+    assert all(isinstance(department, Department) for department in instance.departments)
+
+
+def test_make_respects_map_field_inner_type():
+    """
+    Test that `baker.make` generates a dict whose values match the inner field type declared for `MapField` (issue #46).
+
+    Asserts:
+    - `scores` has 2 entries.
+    - Every value in `scores` is an `int`.
+    """
+    instance = baker.make(MapFieldDocument)
+    assert len(instance.scores) == 2
+    assert all(isinstance(value, int) for value in instance.scores.values())
+
+
+def test_make_generates_instance_for_lazy_reference_field():
+    """
+    Test that `baker.make` generates a referenced document instance for `LazyReferenceField` (issue #46).
+
+    Asserts:
+    - `ref` resolves to a `ReferencedDocument` instance via `.fetch()`, mirroring `ReferenceField` support.
+    """
+    instance = baker.make(LazyRefDocument)
+    assert isinstance(instance.ref.fetch(), ReferencedDocument)
+
+
+def test_make_raises_clear_error_for_generic_reference_field():
+    """
+    Test that `baker.make` raises a clear, actionable error for `GenericReferenceField` (issue #46).
+
+    `GenericReferenceField` has no fixed `document_type`, so baker has no way to know which
+    Document subclass to instantiate automatically. This must raise a message distinct from the
+    generic `_mock_default` fallback, so the caller understands *why* it can't be mocked.
+
+    Asserts:
+    - A `ValueError` mentioning the missing `document_type` is raised.
+    """
+    with pytest.raises(ValueError, match="no fixed document_type"):
+        baker.make(GenericRefDocument)
 
 
 def test_make_with_invalid_document_class():
