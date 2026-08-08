@@ -66,6 +66,42 @@ class DocumentToTest(Document):
     meta = {"collection": "test_documents"}
 
 
+class BotDialog(Document):
+    """
+    BotDialog reproduces the field setup reported in issue #22, where a `StringField` with `choices` could be filled with a value outside the allowed list.
+
+    Attributes:
+        title (StringField): The dialog title. This field is required.
+        status (StringField): The dialog status. This field is required.
+        node_type (StringField): The node type, restricted to a fixed set of choices.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    title = StringField(required=True)
+    status = StringField(required=True, default="NEW")
+    node_type = StringField(default="standard", required=True, choices=["standard", "manual", "slot", "soft"])
+
+    meta = {"collection": "test_documents"}
+
+
+class Priority(Document):
+    """
+    Priority exercises `choices` declared as a list of (value, label) tuples on a non-string field, to ensure the choice extraction is type-agnostic.
+
+    Attributes:
+        level (IntField): The priority level, restricted to a fixed set of choices.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    level = IntField(required=True, choices=[(1, "Low"), (2, "Medium"), (3, "High")])
+
+    meta = {"collection": "test_documents"}
+
+
 def test_mongo_bakery_module_exists():
     """
     Test to ensure that the `baker` module exists and is not None.
@@ -163,6 +199,31 @@ def test_mock_dependencies():
     baker.mock_dependencies(["SomeClass", "AnotherClass"])
     instance = baker.make(DocumentToTest)
     assert isinstance(instance, DocumentToTest)
+
+
+def test_make_respects_string_field_choices():
+    """
+    Test that `baker.make` only fills a `StringField` with `choices` using an allowed value.
+
+    This reproduces the scenario from issue #22, where `node_type` could be filled with a
+    random string outside `choices`, causing a `ValidationError` on save.
+
+    Asserts:
+    - `node_type` is one of the values declared in `choices`.
+    """
+    instance = baker.make(BotDialog)
+    assert instance.node_type in ["standard", "manual", "slot", "soft"]
+
+
+def test_make_respects_tuple_choices_on_non_string_field():
+    """
+    Test that `baker.make` handles `choices` declared as (value, label) tuples on a non-string field.
+
+    Asserts:
+    - `level` is one of the values (not the labels) declared in `choices`.
+    """
+    instance = baker.make(Priority)
+    assert instance.level in [1, 2, 3]
 
 
 def test_make_with_invalid_document_class():
