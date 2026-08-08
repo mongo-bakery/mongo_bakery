@@ -41,7 +41,7 @@ class Baker:
 
         Raises:
             ValueError: If the provided document_class is not a subclass of mongoengine.Document
-            or mongoengine.EmbeddedDocument.
+                or mongoengine.EmbeddedDocument.
         """
         """Creates and saves one or more instances of a MongoEngine document."""
         if not (issubclass(document_class, Document) or issubclass(document_class, EmbeddedDocument)):

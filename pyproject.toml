@@ -54,6 +54,11 @@ dev = [
     "ruff>=0.9.6",
     "taskipy>=1.14.1",
 ]
+docs = [
+    "mkdocs-material>=9.6.4",
+    "mkdocstrings>=0.28.1",
+    "mkdocstrings-python>=1.16.0",
+]
 
 [tool.ruff.lint]
 select = [
@@ -105,3 +110,5 @@ lint = 'uv run ruff check'
 pre_test = 'task lint'
 test = 'pytest --cov=mongo_bakery'
 post_test = 'coverage html'
+docs = 'uv run --group docs mkdocs serve'
+docs_build = 'uv run --group docs mkdocs build'
