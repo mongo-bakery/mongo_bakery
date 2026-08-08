@@ -96,6 +96,23 @@ class AnotherClass:
     """A real dependency stand-in for `test_mock_dependencies`, so patching it doesn't raise."""
 
 
+class FakerAttributeCollisionDocument(Document):
+    """
+    FakerAttributeCollisionDocument exercises `mock_StringField`'s Faker-provider-by-name lookup (issue #51).
+
+    Attributes:
+        locales (StringField): Named after `Faker.locales`, a real but non-callable attribute
+            (a `list`), so calling it like a provider raises `TypeError`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    locales = StringField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
 class BotDialog(Document):
     """
     BotDialog reproduces the field setup reported in issue #22, where a `StringField` with `choices` could be filled with a value outside the allowed list.
@@ -689,6 +706,22 @@ def test_make_respects_string_field_choices():
     """
     instance = baker.make(BotDialog)
     assert instance.node_type in ["standard", "manual", "slot", "soft"]
+
+
+def test_make_falls_back_when_field_name_collides_with_unrelated_faker_attribute():
+    """
+    Test that `baker.make` degrades gracefully on a Faker attribute name collision (issue #51).
+
+    The colliding attribute isn't a zero-argument provider method. `Faker.locales` is a real
+    attribute (a `list`, not a method), so `mock_StringField`'s
+    Faker-provider-by-name lookup (issue #23) previously called it like a provider and raised
+    `TypeError: 'list' object is not callable` instead of falling back to `faker.word()`.
+
+    Asserts:
+    - `baker.make` returns a valid instance instead of raising, with `locales` set to a string.
+    """
+    instance = baker.make(FakerAttributeCollisionDocument)
+    assert isinstance(instance.locales, str)
 
 
 def test_make_respects_tuple_choices_on_non_string_field():
