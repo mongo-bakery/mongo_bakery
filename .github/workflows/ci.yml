@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   uv:
-    name: python
+    name: mongo-bakery-ci
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +14,7 @@ jobs:
         id: uv-cache
         uses: actions/cache@v3
         with:
-          path: /tmp/.uv-cache
+          path: .uv-cache
           key: setup-uv-1-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             setup-uv-1-${{ runner.os }}-

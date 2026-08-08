@@ -1,6 +1,11 @@
 # mongo_bakery
 
 [![codecov](https://codecov.io/gh/mongo-bakery/mongo_bakery/graph/badge.svg?token=FXA6QEILP6)](https://codecov.io/gh/mongo-bakery/mongo_bakery)
+[![mongo-bakery-ci](https://github.com/mongo-bakery/mongo_bakery/actions/workflows/ci.yml/badge.svg)](https://github.com/mongo-bakery/mongo_bakery/actions)
+[![GitHub issues](https://img.shields.io/github/issues/mongo-bakery/mongo_bakery.svg)](https://GitHub.com/mongo-bakery/mongo_bakery/issues/)
+[![GitHub stars](https://img.shields.io/github/stars/mongo-bakery/mongo_bakery.svg?style=social&label=Star&maxAge=2592000)](https://github.com/mongo-bakery/mongo_bakery/stargazers/)
+![GitHub top language](https://img.shields.io/github/languages/top/mongo-bakery/mongo_bakery)
+[![GPLv3 license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 Inspired by [model-bakery](https://model-bakery.readthedocs.io/en/latest/), this project aims to simplify the process of
 creating MongoDB documents for testing purposes. The goal is to deliver a maintainable, intuitive, and
@@ -28,7 +33,7 @@ are populated).
 
 We welcome contributions to the mongo_bakery project! Here are the steps to get started:
 
-1. **Fork the Repository**: Fork the [mongo_bakery repository](https://github.com/huogerac/mongo_bakery) on GitHub.
+1. **Fork the Repository**: Fork the [mongo_bakery repository](https://github.com/mongo-bakery/mongo_bakery) on GitHub.
 
 2. **Clone Your Fork**: Clone your forked repository to your local machine.
 
@@ -83,3 +88,11 @@ changes and any relevant information.
 
 10. **Review Process**: Your pull request will be reviewed by the maintainers. Be prepared to make any necessary
 changes based on feedback.
+
+### Contributors
+
+<a href="https://github.com/mongo-bakery/mongo_bakery/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mongo-bakery/mongo_bakery" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
