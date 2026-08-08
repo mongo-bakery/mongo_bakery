@@ -1,8 +1,10 @@
+import importlib.util
 import sys
 import types
 import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from unittest.mock import ANY, patch
 
 import pytest
 from mongoengine import (
@@ -29,7 +31,10 @@ from mongoengine import (
     UUIDField,
 )
 
-from mongo_bakery import baker
+from mongo_bakery import (
+    baker,
+    bakery as bakery_module,
+)
 
 
 class Department(EmbeddedDocument):
@@ -80,6 +85,14 @@ class DocumentToTest(Document):
     region = StringField(required=False)
 
     meta = {"collection": "test_documents"}
+
+
+class SomeClass:
+    """A real dependency stand-in for `test_mock_dependencies`, so patching it doesn't raise."""
+
+
+class AnotherClass:
+    """A real dependency stand-in for `test_mock_dependencies`, so patching it doesn't raise."""
 
 
 class BotDialog(Document):
@@ -396,6 +409,102 @@ def test_mock_dependencies():
     baker.mock_dependencies(["SomeClass", "AnotherClass"])
     instance = baker.make(DocumentToTest)
     assert isinstance(instance, DocumentToTest)
+
+
+def _load_module_from_source(tmp_path, module_name, source, extra_globals=None):
+    """Write `source` to a real .py file and import it under `module_name`.
+
+    This way `inspect.getsource` sees exactly the text under test, with no interference from
+    this test file's own source. `extra_globals` is injected into the module's namespace before
+    execution, so `source` can
+    reference a name without ever spelling it out as a `class`/`def` statement (which would
+    always have a space next to it, contaminating the whitespace-adjacency scenario under test).
+    """
+    module_path = tmp_path / f"{module_name}.py"
+    module_path.write_text(source)
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    if extra_globals:
+        module.__dict__.update(extra_globals)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_mock_dependencies_detects_usage_without_surrounding_whitespace(tmp_path):
+    """
+    Test that `mock_dependencies` detects a dependency used with no whitespace around it (issue #48).
+
+    The previous space-based substring check (`f" {dep}" in line or f"{dep} " in line`) missed
+    usages like a name packed tightly inside brackets, since neither side of the name has a
+    literal space next to it. `_marker = [NoSpaceDependency]` reproduces exactly that; the name is
+    injected as a pre-existing global instead of a `class` statement, so its only appearance in the
+    module's source text is that no-space usage.
+
+    Asserts:
+    - `patch` is called for `NoSpaceDependency` when generating an instance of the document.
+    """
+    module_name = "issue48_no_space_dependency_module"
+    module = _load_module_from_source(
+        tmp_path,
+        module_name,
+        "from mongoengine import Document, StringField\n"
+        "\n"
+        "class DocWithNoSpaceUsage(Document):\n"
+        "    name = StringField(required=True)\n"
+        "    meta = {'collection': 'fake_collection'}\n"
+        "\n"
+        "_marker = [NoSpaceDependency]\n",
+        extra_globals={"NoSpaceDependency": object()},
+    )
+    try:
+        baker.mock_dependencies(["NoSpaceDependency"])
+        with patch.object(bakery_module, "patch", wraps=bakery_module.patch) as patch_spy:
+            instance = baker.make(module.DocWithNoSpaceUsage)
+        assert isinstance(instance, module.DocWithNoSpaceUsage)
+        patch_spy.assert_any_call(f"{module_name}.NoSpaceDependency", new=ANY)
+    finally:
+        del sys.modules[module_name]
+        baker.mock_dependencies([])
+
+
+def test_mock_dependencies_does_not_false_positive_on_identifier_prefix(tmp_path):
+    """
+    Test that `mock_dependencies` doesn't false-positive on an identifier prefix (issue #48).
+
+    A dependency name must not be treated as used just because it's a leading prefix of a
+    longer, unrelated identifier preceded by whitespace. The previous space-based substring
+    check matched `" Foo"` inside `class FooExtendedDependency`,
+    even though `FooExtendedDependency` is a distinct identifier that merely starts with `Foo`.
+    `Foo` itself is injected as a pre-existing global (never spelled out in the source as its own
+    `class` statement), so its only textual appearance is as that prefix.
+
+    Asserts:
+    - `patch` is never called for `Foo` when generating an instance of the document.
+    """
+    module_name = "issue48_identifier_prefix_module"
+    module = _load_module_from_source(
+        tmp_path,
+        module_name,
+        "from mongoengine import Document, StringField\n"
+        "\n"
+        "class FooExtendedDependency:\n"
+        "    pass\n"
+        "\n"
+        "class DocWithPrefixIdentifier(Document):\n"
+        "    name = StringField(required=True)\n"
+        "    meta = {'collection': 'fake_collection'}\n",
+        extra_globals={"Foo": object()},
+    )
+    try:
+        baker.mock_dependencies(["Foo"])
+        with patch.object(bakery_module, "patch", wraps=bakery_module.patch) as patch_spy:
+            instance = baker.make(module.DocWithPrefixIdentifier)
+        assert isinstance(instance, module.DocWithPrefixIdentifier)
+        patch_spy.assert_not_called()
+    finally:
+        del sys.modules[module_name]
+        baker.mock_dependencies([])
 
 
 def test_make_does_not_crash_when_module_has_no_file():
