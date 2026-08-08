@@ -197,6 +197,33 @@ def test_make_multiple_instances():
     assert len(instances) == 3
 
 
+def test_make_embedded_document_single_instance():
+    """
+    Test that `baker.make` returns a single `EmbeddedDocument` instance when `_quantity` is left at its default.
+
+    Asserts:
+        - The returned value is a `Department` instance, not a list.
+    """
+    instance = baker.make(Department)
+    assert isinstance(instance, Department)
+
+
+def test_make_embedded_document_respects_quantity():
+    """
+    Test that `baker.make` honors `_quantity` for `EmbeddedDocument` subclasses (issue #44).
+
+    Previously the method returned after the first iteration for `EmbeddedDocument`,
+    silently ignoring `_quantity` and always producing a single instance.
+
+    Asserts:
+        - The number of instances created equals the specified quantity (3).
+        - Every created instance is a `Department`.
+    """
+    instances = baker.make(Department, _quantity=3)
+    assert len(instances) == 3
+    assert all(isinstance(instance, Department) for instance in instances)
+
+
 def test_cleanup():
     """
     Test the cleanup functionality of the baker instance.
