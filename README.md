@@ -140,6 +140,16 @@ delete them all:
 baker.cleanup()
 ```
 
+`mongo_bakery` also ships as a pytest plugin, registered automatically once it's installed. Use the `baker` fixture
+instead to get this cleanup for free after every test:
+
+```python
+def test_something(baker):
+    customer = baker.make(Customer)
+    ...
+# cleanup() is called automatically once the test finishes
+```
+
 See the [API Reference](https://mongo-bakery.github.io/mongo_bakery/api/) for the full `Baker` interface.
 
 ## Alternatives

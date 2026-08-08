@@ -594,11 +594,11 @@ dependencies = [
     { name = "faker" },
     { name = "mongoengine" },
     { name = "mongomock" },
+    { name = "pytest" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "taskipy" },
@@ -615,11 +615,11 @@ requires-dist = [
     { name = "faker", specifier = ">=36.1.1" },
     { name = "mongoengine", specifier = ">=0.20.0" },
     { name = "mongomock", specifier = ">=4.3.0" },
+    { name = "pytest", specifier = ">=9.0.3" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.6" },
     { name = "taskipy", specifier = ">=1.14.1" },

@@ -18,6 +18,7 @@ dependencies = [
     "faker>=36.1.1",
     "mongoengine>=0.20.0",
     "mongomock>=4.3.0",
+    "pytest>=9.0.3",
 ]
 keywords = [
     "MongoDB",
@@ -42,6 +43,9 @@ Repository = "https://github.com/mongo-bakery/mongo_bakery"
 Documentation = "https://mongo-bakery.github.io/mongo_bakery/"
 Issues = "https://github.com/mongo-bakery/mongo_bakery/issues"
 
+[project.entry-points.pytest11]
+mongo_bakery = "mongo_bakery.pytest_plugin"
+
 [tool.hatch.version]
 path = "mongo_bakery/__about__.py"
 
@@ -52,7 +56,6 @@ include = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "ruff>=0.9.6",
     "taskipy>=1.14.1",
