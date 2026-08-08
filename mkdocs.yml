@@ -10,8 +10,10 @@ nav:
 
 theme:
   name: material
+  logo: assets/logoMongoBakery.png
+  favicon: assets/logoMongoBakery.png
   palette:
-    primary: indigo
+    primary: white
     accent: indigo
   font:
     text: 'Roboto'
