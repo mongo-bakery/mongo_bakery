@@ -101,6 +101,9 @@ class Baker:
             Any: Mock data appropriate for the given field type.
 
         """
+        if field.choices:
+            return self._mock_choice(field)
+
         field_type = type(field).__name__
         mock_method_name = f"mock_{field_type}"
         mock_method = getattr(bakery_fields_generators, mock_method_name, self._mock_default)
@@ -108,6 +111,19 @@ class Baker:
         if field_type in {"EmbeddedDocumentField", "ReferenceField"}:
             return mock_method(field, self)
         return mock_method(field)
+
+    def _mock_choice(self, field):
+        """
+        Pick a random value from a field's `choices` so the result always passes mongoengine's choices validation.
+
+        Args:
+            field: The Field instance whose `choices` attribute should be used.
+
+        Returns:
+            Any: One of the valid values declared in `field.choices`.
+        """
+        choice = faker.random_element(field.choices)
+        return choice[0] if isinstance(choice, list | tuple) else choice
 
     def _mock_default(self, field):
         """When there is no match for the field type."""
