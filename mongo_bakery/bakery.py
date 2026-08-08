@@ -30,12 +30,14 @@ class Baker:
         """
         self._dependencies_to_patch = mock_class
 
-    def make(self, document_class: Document, _quantity: int = 1, **kwargs: dict[Any, Any]) -> Document:
+    def make(
+        self, document_class: type[Document], _quantity: int = 1, **kwargs: dict[Any, Any]
+    ) -> Document | list[Document]:
         """
         Creates and saves one or more instances of a MongoEngine document.
 
         Args:
-            document_class (Document): The MongoEngine document class to instantiate.
+            document_class (type[Document]): The MongoEngine document class to instantiate.
             _quantity (int, optional): The number of instances to create. Defaults to 1.
             **kwargs: Additional field values to set on the document instances.
 
@@ -47,9 +49,8 @@ class Baker:
             ValueError: If the provided document_class is not a subclass of mongoengine.Document
                 or mongoengine.EmbeddedDocument.
         """
-        """Creates and saves one or more instances of a MongoEngine document."""
         if not (issubclass(document_class, Document) or issubclass(document_class, EmbeddedDocument)):
-            raise ValueError("The document must be a subclass of mongoengine.Document")
+            raise ValueError("The document must be a subclass of mongoengine.Document or mongoengine.EmbeddedDocument")
 
         if document_class in self._generation_chain:
             chain_repr = " -> ".join(cls.__name__ for cls in [*self._generation_chain, document_class])
