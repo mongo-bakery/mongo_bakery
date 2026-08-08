@@ -90,6 +90,13 @@ class Baker:
                             continue
                         if not field.required:
                             continue
+
+                        if field.default is not None:
+                            default_value = field.default() if callable(field.default) else field.default
+                            if default_value or not hasattr(field, "field"):
+                                instance_data[field_name] = default_value
+                                continue
+
                         instance_data[field_name] = self._generate_mock_data(field)
 
                     instance_data.update(kwargs)

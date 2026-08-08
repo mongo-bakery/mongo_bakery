@@ -419,6 +419,50 @@ class SeedableDocument(Document):
     meta = {"collection": "test_documents"}
 
 
+class FalsyDefaultDocument(Document):
+    """
+    FalsyDefaultDocument exercises falsy-but-legitimate scalar defaults (issue #55).
+
+    `count` and `is_active` declare falsy defaults (`0` and `False`). These must still be honored:
+    they aren't "empty" in the sense that matters for MongoEngine's required-field validation,
+    which only rejects `None` for scalar fields (unlike complex fields such as `ListField`, where
+    `required=True` also rejects an empty collection).
+
+    Attributes:
+        count (IntField): Required, with a falsy default of `0`.
+        is_active (BooleanField): Required, with a falsy default of `False`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    count = IntField(required=True, default=0)
+    is_active = BooleanField(required=True, default=False)
+
+    meta = {"collection": "test_documents"}
+
+
+class EmptyDefaultListDocument(Document):
+    """
+    EmptyDefaultListDocument exercises the required-and-empty trap for complex fields (issue #55).
+
+    `tags` is a required `ListField` whose `default` factory (`list`) resolves to an empty list.
+    MongoEngine's `ComplexBaseField.validate` rejects a required field with an empty value, even
+    though `[]` is technically "the declared default" — so `baker.make` must **not** blindly use it
+    here and should fall back to generating non-empty mock data instead.
+
+    Attributes:
+        tags (ListField): Required, with a default factory that resolves to an empty list.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    tags = ListField(StringField(), required=True, default=list)
+
+    meta = {"collection": "test_documents"}
+
+
 def test_mongo_bakery_module_exists():
     """
     Test to ensure that the `baker` module exists and is not None.
@@ -734,6 +778,63 @@ def test_make_respects_string_field_choices():
     """
     instance = baker.make(BotDialog)
     assert instance.node_type in ["standard", "manual", "slot", "soft"]
+
+
+def test_make_uses_declared_default_instead_of_random_data():
+    """
+    Test that `baker.make` uses a field's declared `default` instead of generating random data (issue #55).
+
+    `BotDialog.status` is required with `default="NEW"`. Previously `make` always overrode this
+    with a random Faker word, so `status` would almost never actually be `"NEW"`.
+
+    Asserts:
+    - `status` is exactly `"NEW"`, deterministically.
+    """
+    instance = baker.make(BotDialog)
+    assert instance.status == "NEW"
+
+
+def test_make_still_allows_overriding_a_default_via_kwargs():
+    """
+    Test that passing a field explicitly via kwargs still overrides its declared `default` (issue #55).
+
+    Asserts:
+    - `status` is the value passed via kwargs, not the declared default.
+    """
+    instance = baker.make(BotDialog, status="CUSTOM")
+    assert instance.status == "CUSTOM"
+
+
+def test_make_honors_falsy_scalar_defaults():
+    """
+    Test that `baker.make` honors falsy-but-legitimate defaults like `0` and `False` (issue #55).
+
+    A naive `if default_value:` check would mistake these for "no usable default" and generate
+    random data instead, since `0` and `False` are falsy in Python.
+
+    Asserts:
+    - `count` is exactly `0`.
+    - `is_active` is exactly `False`.
+    """
+    instance = baker.make(FalsyDefaultDocument)
+    assert instance.count == 0
+    assert instance.is_active is False
+
+
+def test_make_falls_back_to_random_data_when_default_is_an_empty_required_collection():
+    """
+    Test that `baker.make` doesn't blindly use a default that would fail required-field validation (issue #55).
+
+    `EmptyDefaultListDocument.tags` is a required `ListField` whose default factory resolves to
+    `[]`. MongoEngine rejects a required complex field with an empty value, so `make` must fall
+    back to generating non-empty mock data instead of using the empty default verbatim.
+
+    Asserts:
+    - `baker.make` returns a valid instance instead of raising `ValidationError`.
+    - `tags` is not empty.
+    """
+    instance = baker.make(EmptyDefaultListDocument)
+    assert len(instance.tags) > 0
 
 
 def test_make_falls_back_when_field_name_collides_with_unrelated_faker_attribute():
