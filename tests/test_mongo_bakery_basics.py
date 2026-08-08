@@ -391,6 +391,34 @@ class SequenceDocument(Document):
     meta = {"collection": "test_documents"}
 
 
+class SeedableDocument(Document):
+    """
+    SeedableDocument exercises `baker.seed()` reproducibility (issue #54).
+
+    Deliberately avoids `ObjectIdField`/`UUIDField` and any explicit `_id` override: `ObjectId()`
+    generation isn't driven by Faker's random state (it's timestamp/counter-based), so it would
+    never be reproducible even with a fixed seed.
+
+    Attributes:
+        name (StringField): Used to check string reproducibility.
+        age (IntField): Used to check int reproducibility.
+        height_ft (FloatField): Used to check float reproducibility.
+        is_admin (BooleanField): Used to check boolean reproducibility.
+        joined_at (DateTimeField): Used to check datetime reproducibility.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=True)
+    age = IntField(required=True)
+    height_ft = FloatField(required=True)
+    is_admin = BooleanField(required=True)
+    joined_at = DateTimeField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
 def test_mongo_bakery_module_exists():
     """
     Test to ensure that the `baker` module exists and is not None.
@@ -925,6 +953,36 @@ def test_make_with_invalid_document_class():
         ValueError, match="The document must be a subclass of mongoengine.Document or mongoengine.EmbeddedDocument"
     ):
         baker.make(str)
+
+
+def test_baker_has_seed_method():
+    """Test to ensure that the `baker` object has a `seed` method and that it is callable (issue #54)."""
+    assert hasattr(baker, "seed") and callable(baker.seed)
+
+
+def test_seed_produces_reproducible_mock_data():
+    """
+    Test that `baker.seed()` makes generated mock data reproducible across runs (issue #54).
+
+    Seeds Faker with the same value before generating a `SeedableDocument` twice, and asserts every
+    field ends up with the same value both times.
+
+    Asserts:
+    - Every field on the second instance equals the corresponding field on the first.
+    """
+    baker.seed(1234)
+    first = baker.make(SeedableDocument)
+    baker.cleanup()
+
+    baker.seed(1234)
+    second = baker.make(SeedableDocument)
+    baker.cleanup()
+
+    assert first.name == second.name
+    assert first.age == second.age
+    assert first.height_ft == second.height_ft
+    assert first.is_admin == second.is_admin
+    assert first.joined_at == second.joined_at
 
 
 def test_baker_has_seq_method():
