@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import re
 import sys
 from contextlib import ExitStack
 from typing import Any
@@ -59,7 +60,7 @@ class Baker:
             except (OSError, TypeError):
                 source_lines = []
             for dep in self._dependencies_to_patch:
-                if any(f" {dep}" in line or f"{dep} " in line for line in source_lines):
+                if any(re.search(rf"\b{re.escape(dep)}\b", line) for line in source_lines):
                     patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
 
         # Temporarily disable signals
