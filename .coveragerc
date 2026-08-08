@@ -1,4 +1,6 @@
 [run]
+source =
+    mongo_bakery
 omit =
     tests/*
     __about__.py
