@@ -83,11 +83,9 @@ class Baker:
                         instance_data[field_name] = value()
 
                 instance = document_class(**instance_data)
-                if issubclass(document_class, EmbeddedDocument):
-                    instances.append(instance)
-                    return instances[0]
-                instance.save()
-                self._created_instances.append(instance)
+                if not issubclass(document_class, EmbeddedDocument):
+                    instance.save()
+                    self._created_instances.append(instance)
                 instances.append(instance)
 
         # Reconnect the signal after creating the instances

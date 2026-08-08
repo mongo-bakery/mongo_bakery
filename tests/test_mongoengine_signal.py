@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from mongoengine import Document, IntField, StringField, signals
+from mongoengine import Document, EmbeddedDocument, IntField, StringField, signals
 
 from mongo_bakery import baker
 
@@ -33,3 +33,32 @@ def test_signals_disconnected_and_reconnected():
     ):
         baker.make(DocumentWithSignals)
         mock_connect.assert_called_once_with(DocumentWithSignals.post_save, sender=DocumentWithSignals)
+
+
+def test_signals_reconnected_for_embedded_document():
+    """
+    Test that the `post_save` signal is reconnected when `baker.make` creates an `EmbeddedDocument` (issue #44).
+
+    Previously `baker.make` returned early for `EmbeddedDocument` subclasses, before reaching the
+    reconnect call, so a signal disconnected at the start of the method was never reconnected.
+
+    Defines an `EmbeddedDocumentWithSignals` class with a `post_save` handler, connects it, and
+    asserts that `signals.post_save.connect` is called again after `baker.make` runs.
+    """
+
+    class EmbeddedDocumentWithSignals(EmbeddedDocument):
+        name = StringField(required=True)
+
+        @classmethod
+        def post_save(cls, sender, document, **kwargs):
+            raise Exception("this code don't run")  # pragma: no cover
+
+    signals.post_save.connect(EmbeddedDocumentWithSignals.post_save, sender=EmbeddedDocumentWithSignals)
+
+    with (
+        patch.object(signals.post_save, "connect") as mock_connect,
+    ):
+        baker.make(EmbeddedDocumentWithSignals)
+        mock_connect.assert_called_once_with(
+            EmbeddedDocumentWithSignals.post_save, sender=EmbeddedDocumentWithSignals
+        )
