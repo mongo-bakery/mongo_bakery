@@ -33,7 +33,9 @@ jobs:
         run: uv run ruff check
 
       - name: Run tests
-        run: uv run pytest tests --cov=mongo_bakery --cov-report=xml
+        run: |
+          uv run coverage run -m pytest tests
+          uv run coverage xml
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v6
