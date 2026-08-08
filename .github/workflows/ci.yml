@@ -2,6 +2,10 @@ name: mongo-bakery
 
 on: [push, pull_request]
 
+concurrency:
+  group: ci-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   uv:
     name: mongo-bakery-ci
