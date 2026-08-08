@@ -19,6 +19,7 @@ class Baker:
     def __init__(self, mock_class=None):
         self._dependencies_to_patch = mock_class or []
         self._created_instances = []
+        self._generation_chain = []
 
     def mock_dependencies(self, mock_class: list):
         """
@@ -50,53 +51,64 @@ class Baker:
         if not (issubclass(document_class, Document) or issubclass(document_class, EmbeddedDocument)):
             raise ValueError("The document must be a subclass of mongoengine.Document")
 
-        patch_dependencies = {}
-        module_name = document_class.__module__
+        if document_class in self._generation_chain:
+            chain_repr = " -> ".join(cls.__name__ for cls in [*self._generation_chain, document_class])
+            raise ValueError(
+                f"Cycle detected while generating mock data for required fields: {chain_repr}. "
+                "Pass an explicit value via kwargs to break the cycle."
+            )
 
-        if self._dependencies_to_patch and module_name in sys.modules:
-            module = sys.modules[module_name]
-            try:
-                source_lines = inspect.getsource(module).splitlines()
-            except (OSError, TypeError):
-                source_lines = []
-            for dep in self._dependencies_to_patch:
-                if any(re.search(rf"\b{re.escape(dep)}\b", line) for line in source_lines):
-                    patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
+        self._generation_chain.append(document_class)
+        try:
+            patch_dependencies = {}
+            module_name = document_class.__module__
 
-        # Temporarily disable signals
-        if hasattr(document_class, "post_save"):
-            signals.post_save.disconnect(document_class.post_save, sender=document_class)
+            if self._dependencies_to_patch and module_name in sys.modules:
+                module = sys.modules[module_name]
+                try:
+                    source_lines = inspect.getsource(module).splitlines()
+                except (OSError, TypeError):
+                    source_lines = []
+                for dep in self._dependencies_to_patch:
+                    if any(re.search(rf"\b{re.escape(dep)}\b", line) for line in source_lines):
+                        patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
 
-        instances = []
-        with ExitStack() as stack:
-            for mock in patch_dependencies.values():
-                stack.enter_context(mock)
+            # Temporarily disable signals
+            if hasattr(document_class, "post_save"):
+                signals.post_save.disconnect(document_class.post_save, sender=document_class)
 
-            for _ in range(_quantity):
-                instance_data = {}
-                for field_name, field in document_class._fields.items():
-                    if field_name in kwargs or field_name == "id":
-                        continue
-                    if not field.required:
-                        continue
-                    instance_data[field_name] = self._generate_mock_data(field)
+            instances = []
+            with ExitStack() as stack:
+                for mock in patch_dependencies.values():
+                    stack.enter_context(mock)
 
-                instance_data.update(kwargs)
-                for field_name, value in instance_data.items():
-                    if isinstance(value, Sequence):
-                        instance_data[field_name] = value()
+                for _ in range(_quantity):
+                    instance_data = {}
+                    for field_name, field in document_class._fields.items():
+                        if field_name in kwargs or field_name == "id":
+                            continue
+                        if not field.required:
+                            continue
+                        instance_data[field_name] = self._generate_mock_data(field)
 
-                instance = document_class(**instance_data)
-                if not issubclass(document_class, EmbeddedDocument):
-                    instance.save()
-                    self._created_instances.append(instance)
-                instances.append(instance)
+                    instance_data.update(kwargs)
+                    for field_name, value in instance_data.items():
+                        if isinstance(value, Sequence):
+                            instance_data[field_name] = value()
 
-        # Reconnect the signal after creating the instances
-        if hasattr(document_class, "post_save"):
-            signals.post_save.connect(document_class.post_save, sender=document_class)
+                    instance = document_class(**instance_data)
+                    if not issubclass(document_class, EmbeddedDocument):
+                        instance.save()
+                        self._created_instances.append(instance)
+                    instances.append(instance)
 
-        return instances if _quantity > 1 else instances[0]
+            # Reconnect the signal after creating the instances
+            if hasattr(document_class, "post_save"):
+                signals.post_save.connect(document_class.post_save, sender=document_class)
+
+            return instances if _quantity > 1 else instances[0]
+        finally:
+            self._generation_chain.pop()
 
     def seq(self, value, increment_by=1, start=None):
         """

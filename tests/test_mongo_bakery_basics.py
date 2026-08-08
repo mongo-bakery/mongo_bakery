@@ -26,6 +26,7 @@ from mongoengine import (
     LongField,
     MapField,
     ObjectIdField,
+    ReferenceField,
     StringField,
     URLField,
     UUIDField,
@@ -254,6 +255,94 @@ class GenericRefDocument(Document):
     """
 
     ref = GenericReferenceField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class SelfReferencingDocument(Document):
+    """
+    SelfReferencingDocument exercises direct self-reference detection via `ReferenceField` (issue #49).
+
+    Attributes:
+        name (StringField): A simple required field, only used to make the document saveable.
+        parent (ReferenceField): A required reference to another `SelfReferencingDocument`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=True)
+    parent = ReferenceField("self", required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class SelfEmbeddingDocument(EmbeddedDocument):
+    """
+    SelfEmbeddingDocument exercises direct self-reference detection via `EmbeddedDocumentField` (issue #49).
+
+    Attributes:
+        child (EmbeddedDocumentField): A required embedded reference to another `SelfEmbeddingDocument`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    child = EmbeddedDocumentField("self", required=True)
+
+
+class CycleDocumentA(Document):
+    """
+    CycleDocumentA exercises indirect cycle detection together with `CycleDocumentB` (issue #49).
+
+    Attributes:
+        name (StringField): A simple required field, only used to make the document saveable.
+        b (ReferenceField): A required reference to `CycleDocumentB`, which references this class back.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=True)
+    b = ReferenceField("CycleDocumentB", required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class CycleDocumentB(Document):
+    """
+    CycleDocumentB closes the indirect cycle with `CycleDocumentA` (issue #49).
+
+    Attributes:
+        name (StringField): A simple required field, only used to make the document saveable.
+        a (ReferenceField): A required reference back to `CycleDocumentA`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=True)
+    a = ReferenceField(CycleDocumentA, required=True)
+
+    meta = {"collection": "test_documents"}
+
+
+class NonCyclicDualReferenceDocument(Document):
+    """
+    Regression fixture for issue #49.
+
+    Two separate references to the same, non-cyclic document type must not be mistaken for a cycle.
+
+    Attributes:
+        primary_ref (ReferenceField): A required reference to a `ReferencedDocument`.
+        secondary_ref (ReferenceField): A second, independent required reference to a `ReferencedDocument`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    primary_ref = ReferenceField(ReferencedDocument, required=True)
+    secondary_ref = ReferenceField(ReferencedDocument, required=True)
 
     meta = {"collection": "test_documents"}
 
@@ -728,6 +817,64 @@ def test_make_raises_clear_error_for_generic_reference_field():
     """
     with pytest.raises(ValueError, match="no fixed document_type"):
         baker.make(GenericRefDocument)
+
+
+def test_make_raises_clear_error_for_direct_self_reference_via_reference_field():
+    """
+    Test that `baker.make` raises a clear error instead of recursing forever on self-reference (issue #49).
+
+    `SelfReferencingDocument.parent` is a required `ReferenceField("self")`, so generating its mock
+    data recurses into `baker.make(SelfReferencingDocument)` again, forever, unless detected.
+
+    Asserts:
+    - A `ValueError` mentioning the cycle is raised, not a `RecursionError`.
+    """
+    with pytest.raises(ValueError, match="Cycle detected"):
+        baker.make(SelfReferencingDocument)
+
+
+def test_make_raises_clear_error_for_direct_self_reference_via_embedded_document_field():
+    """
+    Test that `baker.make` raises a clear error instead of recursing forever on self-embedding (issue #49).
+
+    `SelfEmbeddingDocument.child` is a required `EmbeddedDocumentField("self")`, so generating its
+    mock data recurses into `baker.make(SelfEmbeddingDocument)` again, forever, unless detected.
+
+    Asserts:
+    - A `ValueError` mentioning the cycle is raised, not a `RecursionError`.
+    """
+    with pytest.raises(ValueError, match="Cycle detected"):
+        baker.make(SelfEmbeddingDocument)
+
+
+def test_make_raises_clear_error_for_indirect_cycle():
+    """
+    Test that `baker.make` detects an indirect cycle spanning more than one document type (issue #49).
+
+    `CycleDocumentA.b` requires a `CycleDocumentB`, whose `a` field requires a `CycleDocumentA` back,
+    so generating either one recurses into the other forever unless detected.
+
+    Asserts:
+    - A `ValueError` mentioning the cycle is raised, not a `RecursionError`.
+    """
+    with pytest.raises(ValueError, match="Cycle detected"):
+        baker.make(CycleDocumentA)
+
+
+def test_make_does_not_false_positive_on_repeated_non_cyclic_reference():
+    """
+    Test that `baker.make` doesn't mistake two independent references to the same type for a cycle (issue #49).
+
+    `NonCyclicDualReferenceDocument` has two separate required `ReferenceField(ReferencedDocument)`
+    fields. Since `ReferencedDocument` doesn't reference anything back, this must succeed normally:
+    the cycle tracking must reflect the currently active call stack, not "every type ever generated".
+
+    Asserts:
+    - `baker.make` returns a valid instance, and both reference fields resolve to `ReferencedDocument`.
+    """
+    instance = baker.make(NonCyclicDualReferenceDocument)
+    assert isinstance(instance.primary_ref, ReferencedDocument)
+    assert isinstance(instance.secondary_ref, ReferencedDocument)
 
 
 def test_make_with_invalid_document_class():
