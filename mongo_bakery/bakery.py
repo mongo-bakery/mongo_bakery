@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 from faker import Faker
 from mongoengine import Document, EmbeddedDocument, signals
 
+from mongo_bakery.sequences import Sequence
+
 faker = Faker()
 bakery_fields_generators = importlib.import_module("mongo_bakery.bakery_fields_generators")
 
@@ -76,6 +78,10 @@ class Baker:
                     instance_data[field_name] = self._generate_mock_data(field)
 
                 instance_data.update(kwargs)
+                for field_name, value in instance_data.items():
+                    if isinstance(value, Sequence):
+                        instance_data[field_name] = value()
+
                 instance = document_class(**instance_data)
                 if issubclass(document_class, EmbeddedDocument):
                     instances.append(instance)
@@ -89,6 +95,21 @@ class Baker:
             signals.post_save.connect(document_class.post_save, sender=document_class)
 
         return instances if _quantity > 1 else instances[0]
+
+    def seq(self, value, increment_by=1, start=None):
+        """
+        Build a sequence that yields an incrementing value each time `make` creates an instance.
+
+        Args:
+            value: The base value. Supported types are str, int, float, date and datetime.
+            increment_by: The amount added on every call. Defaults to 1. For date/datetime values,
+                this must be a timedelta.
+            start: The offset applied on the first call. Defaults to `increment_by`.
+
+        Returns:
+            Sequence: A callable object that `make` resolves to a new value for each instance.
+        """
+        return Sequence(value, increment_by=increment_by, start=start)
 
     def _generate_mock_data(self, field):
         """

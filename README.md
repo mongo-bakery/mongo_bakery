@@ -108,6 +108,24 @@ order = baker.make(Order)
 order.status in ["pending", "shipped", "delivered"]  # always True
 ```
 
+### Unique/incrementing values with `baker.seq`
+
+Pass `baker.seq(value)` as a kwarg to get a different, incrementing value on each instance instead of the same
+value repeated across `_quantity` instances. It supports `str`, `int`, `float`, `date` and `datetime` base values:
+
+```python
+customers = baker.make(Customer, name=baker.seq("Chad"), _quantity=3)
+[customer.name for customer in customers]  # ["Chad1", "Chad2", "Chad3"]
+```
+
+Use `increment_by` to control the step (a `timedelta` for `date`/`datetime` values) and `start` to control the
+first value of the sequence (defaults to `increment_by`):
+
+```python
+customers = baker.make(Customer, loyalty_points=baker.seq(0, increment_by=10, start=100), _quantity=3)
+[customer.loyalty_points for customer in customers]  # [100, 110, 120]
+```
+
 ### Embedded and referenced Documents
 
 `EmbeddedDocumentField` and `ReferenceField` are resolved recursively with `baker.make`, so nested documents are
