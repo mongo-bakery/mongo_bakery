@@ -105,6 +105,26 @@ class Priority(Document):
     meta = {"collection": "test_documents"}
 
 
+class TypedListDocument(Document):
+    """
+    TypedListDocument exercises `ListField` mock generation across typed and untyped inner fields (issue #45).
+
+    Attributes:
+        numbers (ListField): A list of integers, typed via `ListField(IntField())`.
+        names (ListField): A list of strings, typed via `ListField(StringField())`.
+        tags (ListField): An untyped list, declared as plain `ListField()`.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    numbers = ListField(IntField(), required=True)
+    names = ListField(StringField(), required=True)
+    tags = ListField(required=True)
+
+    meta = {"collection": "test_documents"}
+
+
 class SequenceDocument(Document):
     """
     SequenceDocument exercises `baker.seq()` across the field types it supports: str, int, float, date and datetime.
@@ -281,6 +301,47 @@ def test_make_respects_tuple_choices_on_non_string_field():
     """
     instance = baker.make(Priority)
     assert instance.level in [1, 2, 3]
+
+
+def test_make_respects_typed_list_field_inner_type():
+    """
+    Test that `baker.make` generates values matching the inner field type declared for a typed `ListField` (issue #45).
+
+    Previously `mock_ListField` always generated a list of Faker words regardless of `field.field`,
+    which broke mongoengine's validation for typed lists like `ListField(IntField())`.
+
+    Asserts:
+    - Every generated element of `numbers` is an `int`.
+    """
+    instance = baker.make(TypedListDocument)
+    assert all(isinstance(value, int) for value in instance.numbers)
+
+
+def test_make_untyped_list_field_falls_back_to_words():
+    """
+    Test that `baker.make` keeps generating a list of Faker words for an untyped `ListField` (`field.field is None`).
+
+    Asserts:
+    - `tags` is a list of 2 strings, preserving the pre-issue-#45 fallback behavior.
+    """
+    instance = baker.make(TypedListDocument)
+    assert len(instance.tags) == 2
+    assert all(isinstance(value, str) for value in instance.tags)
+
+
+def test_make_typed_string_list_field_does_not_raise():
+    """
+    Test that `baker.make` does not raise when the inner field of a `ListField` is a `StringField` (issue #45).
+
+    The inner field of a `ListField` is never bound to a document attribute, so its `.name` is `None`.
+    `mock_StringField` used to call `hasattr(faker, field.name)` unconditionally, which raises
+    `TypeError` for `None` once `mock_ListField` starts delegating to it.
+
+    Asserts:
+    - Every generated element of `names` is a `str`.
+    """
+    instance = baker.make(TypedListDocument)
+    assert all(isinstance(value, str) for value in instance.names)
 
 
 def test_make_with_invalid_document_class():
