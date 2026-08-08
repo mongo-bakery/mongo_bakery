@@ -1,4 +1,5 @@
 site_name: Mongo Bakery
+site_url: https://mongo-bakery.github.io/mongo_bakery/
 repo_url: https://github.com/mongo-bakery/mongo_bakery
 repo_name: mongo_bakery
 edit_uri: tree/main/docs
