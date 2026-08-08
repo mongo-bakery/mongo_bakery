@@ -912,15 +912,18 @@ def test_make_does_not_false_positive_on_repeated_non_cyclic_reference():
 
 def test_make_with_invalid_document_class():
     """
-    Test that `baker.make` raises a `ValueError` when called with an invalid document class.
+    Test that `baker.make` raises a `ValueError` when called with an invalid document class (issue #52).
 
-    This test ensures that the `baker.make` function raises a `ValueError` with the appropriate
-    error message when it is called with a class that is not a subclass of `mongoengine.Document`.
+    `baker.make` accepts both `mongoengine.Document` and `mongoengine.EmbeddedDocument` subclasses
+    (see issue #44), so the error message must mention both instead of only `Document`.
 
     Raises:
-        ValueError: If the provided class is not a subclass of `mongoengine.Document`.
+        ValueError: If the provided class is not a subclass of `mongoengine.Document` or
+            `mongoengine.EmbeddedDocument`.
     """
-    with pytest.raises(ValueError, match="The document must be a subclass of mongoengine.Document"):
+    with pytest.raises(
+        ValueError, match="The document must be a subclass of mongoengine.Document or mongoengine.EmbeddedDocument"
+    ):
         baker.make(str)
 
 
