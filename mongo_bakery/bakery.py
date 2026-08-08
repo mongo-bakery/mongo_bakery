@@ -126,6 +126,18 @@ class Baker:
         """
         return Sequence(value, increment_by=increment_by, start=start)
 
+    def seed(self, value):
+        """
+        Seed Faker's shared random generator, so `make` produces reproducible mock data.
+
+        `Faker.seed` seeds a random generator shared by every `Faker()` instance by default,
+        so this affects mock data generated anywhere in mongo_bakery, not just this module.
+
+        Args:
+            value: The seed value, passed through to `Faker.seed`.
+        """
+        Faker.seed(value)
+
     def _generate_mock_data(self, field):
         """
         Generate mock data based on the provided field type.

@@ -126,6 +126,16 @@ customers = baker.make(Customer, loyalty_points=baker.seq(0, increment_by=10, st
 [customer.loyalty_points for customer in customers]  # [100, 110, 120]
 ```
 
+### Reproducible data with `baker.seed`
+
+Call `baker.seed(value)` to seed Faker's random generator, so `baker.make` produces the same mock data across runs
+— useful for debugging a flaky test or reproducing a specific failure:
+
+```python
+baker.seed(1234)
+customer = baker.make(Customer)  # always the same field values for this seed
+```
+
 ### Embedded and referenced Documents
 
 `EmbeddedDocumentField` and `ReferenceField` are resolved recursively with `baker.make`, so nested documents are
