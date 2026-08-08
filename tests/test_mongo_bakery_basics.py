@@ -1,6 +1,9 @@
+from datetime import date, datetime, timedelta
+
 import pytest
 from mongoengine import (
     BooleanField,
+    DateField,
     DateTimeField,
     DictField,
     Document,
@@ -98,6 +101,33 @@ class Priority(Document):
     """
 
     level = IntField(required=True, choices=[(1, "Low"), (2, "Medium"), (3, "High")])
+
+    meta = {"collection": "test_documents"}
+
+
+class SequenceDocument(Document):
+    """
+    SequenceDocument exercises `baker.seq()` across the field types it supports: str, int, float, date and datetime.
+
+    All fields are optional so each test can focus on the field passed as a `seq` kwarg without triggering
+    random mock data on the others.
+
+    Attributes:
+        name (StringField): Used to test string sequences.
+        age (IntField): Used to test int sequences.
+        height_ft (FloatField): Used to test float sequences.
+        birthday (DateField): Used to test date sequences.
+        joined_at (DateTimeField): Used to test datetime sequences.
+
+    Meta:
+        collection (str): The name of the MongoDB collection where the documents are stored.
+    """
+
+    name = StringField(required=False)
+    age = IntField(required=False)
+    height_ft = FloatField(required=False)
+    birthday = DateField(required=False)
+    joined_at = DateTimeField(required=False)
 
     meta = {"collection": "test_documents"}
 
@@ -238,3 +268,133 @@ def test_make_with_invalid_document_class():
     """
     with pytest.raises(ValueError, match="The document must be a subclass of mongoengine.Document"):
         baker.make(str)
+
+
+def test_baker_has_seq_method():
+    """Test to ensure that the `baker` object has a `seq` method and that it is callable."""
+    assert hasattr(baker, "seq") and callable(baker.seq)
+
+
+def test_seq_generates_incrementing_string_values():
+    """
+    Test that `baker.seq()` appends an incrementing counter to a string base value for each instance created.
+
+    This reproduces the first example from issue #25, where a sequential field should produce
+    'Test1', 'Test2', 'Test3' for three created instances.
+
+    Asserts:
+    - Each instance's `name` matches the base string with an increasing suffix, starting at 1.
+    """
+    instances = baker.make(SequenceDocument, name=baker.seq("Test"), _quantity=3)
+    assert [instance.name for instance in instances] == ["Test1", "Test2", "Test3"]
+
+
+def test_seq_respects_custom_start_and_increment_by_for_strings():
+    """
+    Test that `baker.seq()` honors custom `start` and `increment_by` values for string sequences.
+
+    Asserts:
+    - The counter starts at `start` and grows by `increment_by` on each subsequent instance.
+    """
+    instances = baker.make(SequenceDocument, name=baker.seq("Custom num: ", start=5, increment_by=2), _quantity=2)
+    assert [instance.name for instance in instances] == ["Custom num: 5", "Custom num: 7"]
+
+
+def test_seq_generates_incrementing_int_values():
+    """
+    Test that `baker.seq()` accumulates `increment_by` on top of an int base value for each instance created.
+
+    Asserts:
+    - The first instance's value is `value + increment_by`, and each following instance adds another
+      `increment_by` on top of the previous one.
+    """
+    instances = baker.make(SequenceDocument, age=baker.seq(15, increment_by=3), _quantity=2)
+    assert [instance.age for instance in instances] == [18, 21]
+
+
+def test_seq_uses_default_increment_by_one():
+    """
+    Test that `baker.seq()` defaults `increment_by` to 1 when not provided.
+
+    Asserts:
+    - Consecutive instances increase by exactly 1 from the base int value.
+    """
+    instances = baker.make(SequenceDocument, age=baker.seq(10), _quantity=3)
+    assert [instance.age for instance in instances] == [11, 12, 13]
+
+
+def test_seq_generates_incrementing_float_values():
+    """
+    Test that `baker.seq()` accumulates `increment_by` on top of a float base value for each instance created.
+
+    Asserts:
+    - The first instance's value is `value + increment_by`, and each following instance adds another
+      `increment_by` on top of the previous one.
+    """
+    instances = baker.make(SequenceDocument, height_ft=baker.seq(5.5, increment_by=0.25), _quantity=2)
+    assert [instance.height_ft for instance in instances] == [5.75, 6.0]
+
+
+def test_seq_generates_incrementing_date_values():
+    """
+    Test that `baker.seq()` accumulates a `timedelta` `increment_by` on top of a `date` base value.
+
+    Asserts:
+    - Each instance's `birthday` advances by one `increment_by` step from the previous instance.
+    """
+    instances = baker.make(
+        SequenceDocument, birthday=baker.seq(date(2014, 7, 21), increment_by=timedelta(days=1)), _quantity=2
+    )
+    assert [instance.birthday for instance in instances] == [date(2014, 7, 22), date(2014, 7, 23)]
+
+
+def test_seq_generates_incrementing_datetime_values():
+    """
+    Test that `baker.seq()` accumulates a `timedelta` `increment_by` on top of a `datetime` base value.
+
+    Asserts:
+    - Each instance's `joined_at` advances by one `increment_by` step from the previous instance.
+    """
+    base_datetime = datetime(2025, 3, 13, 9, 0, 0)
+    instances = baker.make(
+        SequenceDocument, joined_at=baker.seq(base_datetime, increment_by=timedelta(days=1)), _quantity=3
+    )
+    assert [instance.joined_at for instance in instances] == [
+        datetime(2025, 3, 14, 9, 0, 0),
+        datetime(2025, 3, 15, 9, 0, 0),
+        datetime(2025, 3, 16, 9, 0, 0),
+    ]
+
+
+def test_seq_with_quantity_one_returns_single_incremented_value():
+    """
+    Test that `baker.seq()` works when `_quantity` is left at its default of 1.
+
+    Asserts:
+    - The single created instance receives the first value of the sequence.
+    """
+    instance = baker.make(SequenceDocument, name=baker.seq("Solo"))
+    assert instance.name == "Solo1"
+
+
+def test_seq_only_applies_to_the_field_it_is_assigned_to():
+    """
+    Test that a `seq` value passed for one field does not affect a plain value passed for another field.
+
+    Asserts:
+    - The sequential field varies across instances while the plain field stays constant.
+    """
+    instances = baker.make(SequenceDocument, name=baker.seq("Test"), age=42, _quantity=3)
+    assert [instance.name for instance in instances] == ["Test1", "Test2", "Test3"]
+    assert [instance.age for instance in instances] == [42, 42, 42]
+
+
+def test_seq_raises_for_unsupported_value_type():
+    """
+    Test that `baker.seq()` raises a `ValueError` when used with a value type it doesn't know how to increment.
+
+    Asserts:
+    - A `ValueError` mentioning the unsupported type is raised when the sequence is resolved.
+    """
+    with pytest.raises(ValueError, match="No sequence strategy defined for value type: list"):
+        baker.make(SequenceDocument, name=baker.seq([1, 2, 3]), _quantity=2)
