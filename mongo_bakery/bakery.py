@@ -63,18 +63,7 @@ class Baker:
 
         self._generation_chain.append(document_class)
         try:
-            patch_dependencies = {}
-            module_name = document_class.__module__
-
-            if self._dependencies_to_patch and module_name in sys.modules:
-                module = sys.modules[module_name]
-                try:
-                    source_lines = inspect.getsource(module).splitlines()
-                except (OSError, TypeError):
-                    source_lines = []
-                for dep in self._dependencies_to_patch:
-                    if any(re.search(rf"\b{re.escape(dep)}\b", line) for line in source_lines):
-                        patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
+            patch_dependencies = self._build_dependency_patches(document_class)
 
             # Temporarily disable signals
             if hasattr(document_class, "post_save"):
@@ -86,26 +75,7 @@ class Baker:
                     stack.enter_context(mock)
 
                 for _ in range(_quantity):
-                    instance_data = {}
-                    for field_name, field in document_class._fields.items():
-                        if field_name in kwargs or field_name == "id":
-                            continue
-                        if not field.required:
-                            continue
-
-                        if field.default is not None:
-                            default_value = field.default() if callable(field.default) else field.default
-                            if default_value or not hasattr(field, "field"):
-                                instance_data[field_name] = default_value
-                                continue
-
-                        instance_data[field_name] = self._generate_mock_data(field)
-
-                    instance_data.update(kwargs)
-                    for field_name, value in instance_data.items():
-                        if isinstance(value, Sequence):
-                            instance_data[field_name] = value()
-
+                    instance_data = self._build_instance_data(document_class, kwargs)
                     instance = document_class(**instance_data)
                     if not issubclass(document_class, EmbeddedDocument):
                         instance.save()
@@ -119,6 +89,71 @@ class Baker:
             return instances if _quantity > 1 else instances[0]
         finally:
             self._generation_chain.pop()
+
+    def _build_dependency_patches(self, document_class: type[Document]) -> dict[str, Any]:
+        """
+        Build the `unittest.mock.patch` objects for dependencies actually referenced by the document's module.
+
+        Source-scans the module so only dependencies whose name appears in it are patched, avoiding
+        `patch()` calls that would fail against unrelated modules that don't import that dependency.
+
+        Args:
+            document_class: The document class whose defining module should be scanned.
+
+        Returns:
+            dict[str, Any]: A mapping of dependency name to its not-yet-started `patch` object.
+        """
+        patch_dependencies = {}
+        module_name = document_class.__module__
+
+        if self._dependencies_to_patch and module_name in sys.modules:
+            module = sys.modules[module_name]
+            try:
+                source_lines = inspect.getsource(module).splitlines()
+            except (OSError, TypeError):
+                source_lines = []
+            for dep in self._dependencies_to_patch:
+                if any(re.search(rf"\b{re.escape(dep)}\b", line) for line in source_lines):
+                    patch_dependencies[dep] = patch(f"{module_name}.{dep}", new=MagicMock())
+
+        return patch_dependencies
+
+    def _build_instance_data(self, document_class: type[Document], kwargs: dict[Any, Any]) -> dict[str, Any]:
+        """
+        Resolve constructor kwargs for a single instance of `document_class`.
+
+        For each required field not already covered by `kwargs`, uses the field's declared default
+        if it has one, otherwise generates mock data. `kwargs` are then overlaid on top, and any
+        resulting `Sequence` values are resolved to their next value.
+
+        Args:
+            document_class: The document class whose fields should be resolved.
+            kwargs: Explicit field values passed to `make`, which take precedence over defaults/mocks.
+
+        Returns:
+            dict[str, Any]: Field values ready to pass to `document_class(**instance_data)`.
+        """
+        instance_data = {}
+        for field_name, field in document_class._fields.items():
+            if field_name in kwargs or field_name == "id":
+                continue
+            if not field.required:
+                continue
+
+            if field.default is not None:
+                default_value = field.default() if callable(field.default) else field.default
+                if default_value or not hasattr(field, "field"):
+                    instance_data[field_name] = default_value
+                    continue
+
+            instance_data[field_name] = self._generate_mock_data(field)
+
+        instance_data.update(kwargs)
+        for field_name, value in instance_data.items():
+            if isinstance(value, Sequence):
+                instance_data[field_name] = value()
+
+        return instance_data
 
     def seq(
         self,
