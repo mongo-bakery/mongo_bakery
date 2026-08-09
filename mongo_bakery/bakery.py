@@ -2,7 +2,8 @@ import importlib
 import inspect
 import re
 import sys
-from contextlib import ExitStack
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -61,13 +62,8 @@ class Baker:
                 "Pass an explicit value via kwargs to break the cycle."
             )
 
-        self._generation_chain.append(document_class)
-        try:
+        with self._tracking(document_class), self._signals_disabled(document_class):
             patch_dependencies = self._build_dependency_patches(document_class)
-
-            # Temporarily disable signals
-            if hasattr(document_class, "post_save"):
-                signals.post_save.disconnect(document_class.post_save, sender=document_class)
 
             instances = []
             with ExitStack() as stack:
@@ -82,13 +78,41 @@ class Baker:
                         self._created_instances.append(instance)
                     instances.append(instance)
 
-            # Reconnect the signal after creating the instances
-            if hasattr(document_class, "post_save"):
-                signals.post_save.connect(document_class.post_save, sender=document_class)
-
             return instances if _quantity > 1 else instances[0]
+
+    @contextmanager
+    def _tracking(self, document_class: type[Document]) -> Iterator[None]:
+        """
+        Track `document_class` as in-progress for the duration of the block.
+
+        `make` consults `_generation_chain` before entering this context to detect reference
+        cycles, so the class must be popped again even if the block raises.
+
+        Args:
+            document_class: The document class to add to `_generation_chain` for the block's duration.
+        """
+        self._generation_chain.append(document_class)
+        try:
+            yield
         finally:
             self._generation_chain.pop()
+
+    @contextmanager
+    def _signals_disabled(self, document_class: type[Document]) -> Iterator[None]:
+        """
+        Disconnect `document_class`'s `post_save` signal for the duration of the block.
+
+        Args:
+            document_class: The document class whose `post_save` signal should be silenced.
+        """
+        has_post_save = hasattr(document_class, "post_save")
+        if has_post_save:
+            signals.post_save.disconnect(document_class.post_save, sender=document_class)
+        try:
+            yield
+        finally:
+            if has_post_save:
+                signals.post_save.connect(document_class.post_save, sender=document_class)
 
     def _build_dependency_patches(self, document_class: type[Document]) -> dict[str, Any]:
         """
