@@ -75,16 +75,12 @@ def mock_ObjectIdField(field):
     return ObjectId()
 
 
-def mock_EmbeddedDocumentField(field, baker):
-    return baker.make(field.document_type)
-
-
 def mock_ReferenceField(field, baker):
     return baker.make(field.document_type)
 
 
-def mock_LazyReferenceField(field, baker):
-    return baker.make(field.document_type)
+mock_EmbeddedDocumentField = mock_ReferenceField
+mock_LazyReferenceField = mock_ReferenceField
 
 
 def mock_GenericReferenceField(field, baker):
