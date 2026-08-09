@@ -1214,3 +1214,17 @@ def test_seq_raises_for_unsupported_value_type():
     """
     with pytest.raises(ValueError, match="No sequence strategy defined for value type: list"):
         baker.make(SequenceDocument, name=baker.seq([1, 2, 3]), _quantity=2)
+
+
+def test_deduplicated_field_generator_aliases():
+    """Test that `mock_EmbeddedDocumentField` and `mock_LazyReferenceField` are aliased to `mock_ReferenceField` (issue #72)."""
+    from mongo_bakery.bakery_fields_generators import (
+        mock_EmbeddedDocumentField,
+        mock_LazyReferenceField,
+        mock_ReferenceField,
+    )
+
+    assert mock_EmbeddedDocumentField is mock_ReferenceField
+    assert mock_LazyReferenceField is mock_ReferenceField
+
+
