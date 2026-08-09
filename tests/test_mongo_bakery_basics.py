@@ -1228,3 +1228,35 @@ def test_deduplicated_field_generator_aliases():
     assert mock_LazyReferenceField is mock_ReferenceField
 
 
+def test_mock_generators_name_their_second_parameter_baker():
+    """
+    Test that every `mock_*` generator names its optional second parameter `baker` (issue #71).
+
+    `_generate_mock_data` decides whether to pass the baker instance by checking for a parameter
+    named `baker` in the generator's signature, rather than a hardcoded set of field-type names. A
+    generator that needs recursive baker access but names its second parameter something else would
+    silently receive no baker argument, only surfacing as a `TypeError` once that specific field
+    type is exercised. This test catches that mistake for every generator up front, regardless of
+    which field types happen to be covered elsewhere.
+
+    Asserts:
+    - Every `mock_*` callable's parameter names are `("field",)` or `("field", "baker")`.
+    """
+    import inspect
+
+    from mongo_bakery import bakery_fields_generators
+
+    generators = {
+        name: value
+        for name, value in vars(bakery_fields_generators).items()
+        if name.startswith("mock_") and callable(value)
+    }
+    assert generators, "expected at least one mock_* generator to check"
+
+    for name, mock_method in generators.items():
+        params = tuple(inspect.signature(mock_method).parameters)
+        assert params in (("field",), ("field", "baker")), (
+            f"{name} has parameters {params}; expected ('field',) or ('field', 'baker')"
+        )
+
+
