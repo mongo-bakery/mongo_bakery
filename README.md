@@ -173,63 +173,11 @@ See the [API Reference](https://mongo-bakery.github.io/mongo_bakery/api/) for th
 
 ## Contributing
 
-We welcome contributions to the mongo_bakery project! Here are the steps to get started:
+We welcome contributions to the mongo_bakery project! In short: fork the repo, install dependencies with
+`uv sync`, make your change on a branch, and open a pull request against `main`.
 
-1. **Fork the Repository**: Fork the [mongo_bakery repository](https://github.com/mongo-bakery/mongo_bakery) on GitHub.
-
-2. **Clone Your Fork**: Clone your forked repository to your local machine.
-
-    ```bash
-    git clone https://github.com/your-username/mongo_bakery.git
-    cd mongo_bakery
-    ```
-
-3. **Create a Branch**: Create a new branch for your feature or bugfix.
-
-    ```bash
-    git checkout -b branch-name
-    ```
-
-4. **Install Dependencies**: Install the required dependencies. We use the [uv](https://docs.astral.sh/uv/) tool to
-manage our prject dependencies and vitualenv. So it is a prerequisite to the project.
-
-    ```bash
-    uv sync
-    ```
-
-    This command will create the Python virtual environment with the Python version of the project and install all
-    dependencies.
-
-5. **Make Changes**: Implement your feature or bugfix.
-
-6. **Run Tests and Lint**: Ensure all tests and lint pass before submitting your changes.
-
-    ```bash
-    uv run task test
-    ```
-
-    This command runs `ruff check` as a lint, `pytest` to run all tests, and `coverage html` to generate an html report of test coverage. This html report is for the development side only. On our CI with Github Actions, it runs `pytest --cov=mongo_bakery --cov-report=xml` to generate a report that is send to
-    [codecov.io](https://app.codecov.io/gh/mongo-bakery/mongo_bakery)
-
-7. **Commit Changes**: Commit your changes with a descriptive commit message. Use
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to write your commit messages.
-
-    ```bash
-    git add .
-    git commit -m "feat(issue4): Description of your changes"
-    ```
-
-8. **Push to GitHub**: Push your changes to your forked repository.
-
-    ```bash
-    git push origin branch-name
-    ```
-
-9. **Create a Pull Request**: Open a pull request on the original repository. Provide a clear description of your
-changes and any relevant information.
-
-10. **Review Process**: Your pull request will be reviewed by the maintainers. Be prepared to make any necessary
-changes based on feedback.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, including code style, testing conventions, commit
+message format, and the pull request checklist.
 
 ### Contributors
 

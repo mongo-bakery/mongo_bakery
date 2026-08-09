@@ -140,5 +140,5 @@ See the [API Reference](api.md) for the full `Baker` interface.
 ## Contributing
 
 Contributions are welcome! See the
-[Contributing guide](https://github.com/mongo-bakery/mongo_bakery/blob/main/README.md#contributing) in the project
-README for how to get started.
+[Contributing guide](https://github.com/mongo-bakery/mongo_bakery/blob/main/CONTRIBUTING.md) for how to get
+started.
